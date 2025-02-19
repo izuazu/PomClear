@@ -1,0 +1,553 @@
+/* Mengimpor font Inter dan Lora */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:wght@600&display=swap");
+
+/* Reset margin, padding, dan box-sizing */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", sans-serif;
+}
+
+/* Gaya dasar body */
+body {
+    min-height: 100vh;
+    background: #F0F8FF; /* AliceBlue (60%) */
+    color: #2C3E50; /* Midnight Blue Variation (text color) */
+    overflow-x: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 62px;
+    display: flex;
+    flex-direction: column;
+    background: #2C3E50; /* Midnight Blue Variation */
+    padding: 20px;
+    transition: width 0.4s ease;
+    overflow-x: hidden;
+    z-index: 100;
+    -webkit-transition: width 0.4s ease;
+    -moz-transition: width 0.4s ease;
+    -ms-transition: width 0.4s ease;
+    -o-transition: width 0.4s ease;
+}
+
+.sidebar:hover {
+    width: 200px;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.sidebar-header img {
+    width: 42px;
+    border-radius: 50%;
+    margin-left: -7.8px;
+}
+
+.sidebar-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #F0F8FF; /* AliceBlue (text color) */
+    white-space: nowrap;
+}
+
+/* Link di Sidebar */
+.sidebar-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-left: -14px;
+}
+
+.sidebar-links li a {
+    display: flex;
+    align-items: center;
+    color: #F0F8FF; /* AliceBlue (link text color) */
+    text-decoration: none;
+    padding: 12px 17px;
+    border-radius: 4px;
+    transition: background 0.3s ease, color 0.3s ease;
+    gap: 15px;
+}
+
+.sidebar-links li a:hover {
+    background: rgba(255, 255, 255, 0.1); /* Sedikit transparan */
+    color: #fff;
+}
+
+/* Main Content */
+.main-content {
+    margin-left: 62px;
+    padding: 20px;
+    background: #F0F8FF; /* AliceBlue (60%) */
+    min-height: 100vh; /* Menggunakan min-height */
+    overflow-y: auto;
+    /* overflow-x: auto; <-- Coba hapus ini sementara */
+    position: relative;
+    z-index: 1;
+}
+
+/* Menambahkan efek hover pada sidebar tanpa menggeser konten */
+.sidebar:hover + .main-content {
+    margin-left: 62px;
+}
+
+.content {
+    display: none;
+}
+
+.content.active {
+    display: block;
+}
+
+/* Gaya untuk h2 dalam konten aktif */
+.content.active h2 {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    color: #2C3E50; /* Midnight Blue Variation (header text) */
+    font-weight: 600;
+}
+
+.dashboard-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+    justify-content: space-between;
+}
+
+.info-item {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    flex: 1 1 calc(16.66% - 15px);
+    max-width: calc(16.66% - 15px);
+    text-align: center;
+    transition: transform 0.3s ease;
+    box-sizing: border-box;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #ddd;
+}
+
+.info-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.info-item h4 {
+    font-size: 1rem;
+    color: #2C3E50; /* Midnight Blue Variation (header text) */
+    margin-bottom: 8px;
+}
+
+.info-item p {
+    font-size: 0.875rem;
+    color: #555;
+}
+
+/* Chart Container */
+.chart-dashboard {
+    position: relative;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    overflow: hidden;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+canvas#dashboardChart {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 315px;
+    display: block;
+    margin: 10px auto;
+}
+
+.chart-controls {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 2;
+    padding: 5px 5px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.chart-controls select {
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+/* Kontroling */
+.controlling {
+    width: 80%;
+    /* Lebar diperbesar */
+    margin: auto;
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    font-size: 24px;
+    color: #2C3E50;
+    /* Midnight Blue Variation (header text) */
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+input,
+select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    margin-bottom: 15px;
+}
+
+fieldset {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+
+legend {
+    font-weight: bold;
+    color: #555;
+}
+
+/* Light Control with Flexbox for Alignment */
+.light-control {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px; /* Reduced margin */
+}
+
+.light-control label {
+    flex: 1;
+    margin-right: 5px; /* Reduced margin */
+}
+
+/* Style for the light toggle buttons */
+.light-toggle {
+    background-color: #4CAF50;
+    /* Green */
+    border: none;
+    color: white;
+    padding: 6px 12px; /* Adjusted padding */
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 2px; /* Reduced margin */
+    cursor: pointer;
+    border-radius: 5px;
+    width: 60px;  /* Adjusted width for slightly bigger buttons */
+}
+
+.light-toggle:hover {
+    background-color: #3e8e41;
+}
+
+button {
+    margin-top: 5px;
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background-color: #3498DB;
+    /* Sky Blue (20%) */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #2980B9;
+}
+
+/* Monitoring Section */
+.monitoring {
+    padding: 30px;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    margin: 20px auto;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Title */
+.monitoring h1 {
+    color: #2C3E50; /* Midnight Blue Variation (header text) */
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+    text-align: center;
+}
+
+/* Chart Grid Layout */
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(350px, 1fr)); /* 2 kolom */
+    gap: 25px;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Individual Chart Container */
+.chart-monitoring {
+    width: 100%;
+    height: 300px; /* Sesuaikan tinggi */
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Responsive Design for Tablet Devices */
+@media (max-width: 768px) {
+    /* Memastikan grid menggunakan 1 kolom untuk tablet */
+    .chart-grid {
+        grid-template-columns: 1fr; /* Susunan kolom menjadi 1 */
+    }
+    .chart-monitoring {
+        height: 250px; /* Menyesuaikan ukuran chart */
+    }
+}
+
+/* Responsive Design for Mobile Devices */
+@media (max-width: 480px) {
+    /* Memastikan ukuran chart lebih kecil di layar ponsel */
+    .chart-grid {
+        grid-template-columns: 1fr; /* Satu kolom */
+    }
+    .chart-monitoring {
+        height: 200px; /* Menyesuaikan ukuran chart */
+    }
+}
+
+/* Download Section Styles */
+.excel-style-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 16px;
+    text-align: left;
+}
+
+/* Freeze header */
+.excel-style-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: #3498DB; /* Sky Blue (20%) */
+    color: white;
+    font-weight: bold;
+    border-bottom: 2px solid #ddd;
+}
+
+/* Body styling */
+.excel-style-table th, .excel-style-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+.excel-style-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.excel-style-table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* Scrollable table container */
+.table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+}
+
+/* Download buttons */
+.download-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+    bottom: 10px;
+    background-color: #F0F8FF; /* AliceBlue (60%) */
+    padding: 10px;
+    border-top: 1px solid #ddd;
+}
+
+.btn {
+    background-color: #3498DB; /* Sky Blue (20%) */
+    color: white;
+    border: none;
+    padding: 12px 18px;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #2980B9;
+}
+
+
+/* Responsif */
+@media (max-width: 1024px) {
+    .main-content {
+        margin-left: 63px;
+        overflow-x: auto;
+    }
+
+    .dashboard-info {
+        gap: 10px;
+        justify-content: center;
+    }
+
+    .info-item {
+        flex: 1 1 calc(33% - 10px);
+        max-width: calc(33% - 10px);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard h2 {
+        font-size: 1.25rem;
+    }
+
+    .info-item {
+        flex: 1 1 calc(50% - 10px);
+        max-width: calc(50% - 10px);
+    }
+}
+
+/* Responsif untuk chart-controls */
+@media (max-width: 768px) {
+    .chart-controls {
+        position: relative;
+        top: 0;
+        right: 0;
+        margin-bottom: 10px;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+}
+
+/* Info Section */
+.content#info {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.content#info h1 {
+    font-size: 1.75rem;
+    color: #2C3E50; /* Midnight Blue Variation (header text) */
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.content#info p {
+    font-size: 1rem;
+    color: #555;
+    line-height: 1.5;
+}
+
+/* Container pada Dashboard */
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+/* Responsif untuk tabel download */
+@media (max-width: 768px) {
+    /* Scrollable table container */
+    .table-container {
+        max-width: 100%; /* Pastikan tidak melebihi lebar layar */
+        overflow-x: auto; /* Aktifkan scroll horizontal */
+    }
+
+    .excel-style-table {
+        font-size: 14px; /* Ukuran font lebih kecil */
+    }
+
+    .excel-style-table th, .excel-style-table td {
+        padding: 8px; /* Padding lebih kecil */
+    }
+
+    /* Flexbox */
+    .download-buttons {
+        flex-direction: column; /* stack tombol secara vertikal */
+        align-items: stretch; /* Tombol stretch selebar container */
+        gap: 10px;
+        position: static; /* Remove sticky positioning */
+        background-color: transparent;
+        padding: 0;
+        border-top: none;
+    }
+
+    .download-buttons .btn {
+        width: 100%; /* Lebar tombol 100% */
+        margin-bottom: 0; /* Hapus margin bawah */
+        padding: 10px; /* Padding tombol lebih kecil */
+        box-sizing: border-box;
+    }
+}
+
+/* Universal box-sizing */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
