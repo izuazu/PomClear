@@ -35,6 +35,8 @@ const topics = [
     "iot/light4",
     "iot/control",
     "iot/reset",
+    "iot/duration",
+    "iot/degradation",
 ];
 
 mqttClient.on("connect", () => {

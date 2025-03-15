@@ -16,6 +16,13 @@
 
     <!-- Socket.IO -->
     <script src="/socket.io/socket.io.js"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <!-- Firebase Configuration -->
+    <script src="firebase-config.js"></script>
 </head>
 <body>
 
@@ -79,692 +86,677 @@
         </div>
 
         <!-- CONTROLLING SECTION -->
-<!-- CONTROLLING SECTION -->
-<div id="controlling" class="content">
-  <h1>Controlling</h1>
-  <fieldset>
-      <legend><i class="fas fa-lightbulb"></i> Control Lights:</legend>
-      <div class="light-control">
-          <label for="light1">Light 1:</label>
-          <button type="button" class="light-toggle" id="light1" data-topic="iot/light1" data-state="0">OFF</button>
-      </div>
-      <div class="light-control">
-          <label for="light2">Light 2:</label>
-          <button type="button" class="light-toggle" id="light2" data-topic="iot/light2" data-state="0">OFF</button>
-      </div>
-      <div class="light-control">
-          <label for="light3">Light 3:</label>
-          <button type="button" class="light-toggle" id="light3" data-topic="iot/light3" data-state="0">OFF</button>
-      </div>
-      <div class="light-control">
-          <label for="light4">Light 4:</label>
-          <button type="button" class="light-toggle" id="light4" data-topic="iot/light4" data-state="0">OFF</button>
-      </div>
-  </fieldset>
-
-  <!-- Buttons for Save, Reset, Start, and Stop -->
-  <button type="button" id="saveButton">Save</button>
-  <button type="reset" id="resetButton">Reset</button>
-  <button type="button" id="startButton">Start</button>
-  <button type="button" id="stopButton">Stop</button>
-</div>
-
-<script>
-  // Initialize Socket.IO
-  const socket = io();
-  let isSystemRunning = false;
-  let durationInterval = null; // Interval for updating duration
-  let chartUpdateInterval = null; // Interval for updating chart
-  // Elements to update
-  const phElement = document.getElementById('ph');
-  const turbidityElement = document.getElementById('turbidity');
-  const tdsElement = document.getElementById('tds');
-  const DurasiElement = document.getElementById('Durasi');
-  const degradationElement = document.getElementById('degradation');
-  const statusElement = document.getElementById('status');
-
-  // Chart.js setup
-  const ctx = document.getElementById('dashboardChart').getContext('2d');
-  const chartData = {
-      ph: JSON.parse(localStorage.getItem('chartData_ph')) || [], // Load chart data from localStorage
-      turbidity: JSON.parse(localStorage.getItem('chartData_turbidity')) || [],
-      tds: JSON.parse(localStorage.getItem('chartData_tds')) || [],
-      degradation: JSON.parse(localStorage.getItem('chartData_degradation')) || []
-  };
-  const chartLabels = JSON.parse(localStorage.getItem('chartLabels')) || []; // Load chart labels from localStorage
-
-  let currentDataset = 'ph';
-
-  const dashboardChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-          labels: chartLabels,
-          datasets: [
-              {
-                  label: 'pH Over Time',
-                  data: chartData.ph,
-                  backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                  borderColor: 'rgba(75, 192, 192, 1)',
-                  borderWidth: 2,
-                  tension: 0.4,
-                  pointRadius: 4,
-                  pointBackgroundColor: 'rgba(75, 192, 192, 1)'
-              }
-          ]
-      },
-      options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: {
-              duration: 50,
-              easing: 'linear'
-          },
-          responsiveAnimationDuration: 0,
-          scales: {
-              x: {
-                  title: {
-                      display: true,
-                      text: 'Time'
-                  }
-              },
-              y: {
-                  title: {
-                      display: true,
-                      text: 'Value'
-                  },
-                  beginAtZero: true
-              }
-          },
-          elements: {
-              line: {
-                  tension: 0.2
-              },
-              point: {
-                  radius: 3
-              }
-          }
-      }
-  });
-
-  // Function to update chart dataset
-  function updateChart(selectedDataset) {
-      currentDataset = selectedDataset;
-      dashboardChart.data.datasets[0].data = chartData[selectedDataset];
-      dashboardChart.data.datasets[0].label = `${selectedDataset.charAt(0).toUpperCase() + selectedDataset.slice(1)} Over Time`;
-      dashboardChart.update();
-  }
-
-  // Helper function to get formatted time (HH:MM:SS)
-  function getFormattedTime() {
-      const now = new Date();
-      return `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
-  }
-
-  // Temporary data storage
-  const tempData = {
-      ph: [],
-      turbidity: [],
-      tds: [],
-      degradation: []
-  };
-
-  // Function to add chart data immediately
-  function addChartData(dataset, value) {
-      if (!isSystemRunning) return; // Ensure updates only happen if the system is running
-      tempData[dataset].push(value);
-  }
-
-  // Function to update chart every 30 seconds starting at the 3rd second
-  function updateChartEvery30Seconds() {
-      if (!isSystemRunning) return; // Only update if the system is running
-
-      const formattedTime = getFormattedTime();
-      chartLabels.push(formattedTime);
-
-      Object.keys(tempData).forEach(dataset => {
-          if (tempData[dataset].length > 0) {
-              const avgValue = tempData[dataset].reduce((a, b) => a + b, 0) / tempData[dataset].length;
-              chartData[dataset].push(avgValue);
-              tempData[dataset] = []; // Clear temporary data
-          }
-      });
-
-      // Keep only the most recent 30 data points
-      if (chartLabels.length > 99999999999999999999999999999999999999999999999) {
-          chartLabels.shift();
-          chartData.ph.shift();
-          chartData.turbidity.shift();
-          chartData.tds.shift();
-          chartData.degradation.shift();
-      }
-
-      dashboardChart.data.labels = chartLabels;
-      dashboardChart.update();
-
-      // Save chart data and labels to localStorage
-      localStorage.setItem('chartData_ph', JSON.stringify(chartData.ph));
-      localStorage.setItem('chartData_turbidity', JSON.stringify(chartData.turbidity));
-      localStorage.setItem('chartData_tds', JSON.stringify(chartData.tds));
-      localStorage.setItem('chartData_degradation', JSON.stringify(chartData.degradation));
-      localStorage.setItem('chartLabels', JSON.stringify(chartLabels));
-  }
-
-  // Function to start the system
-  function startSystem() {
-      if (!isSystemRunning) {
-          isSystemRunning = true;
-          console.log("System started.");
-          localStorage.setItem('systemStatus', 'running'); // Save status to localStorage
-
-          // **DURATION CALCULATION CHANGES START HERE**
-          const startTime = new Date().getTime(); // Get the current timestamp
-          localStorage.setItem('startTime', startTime); // Save the start time
-
-          durationInterval = setInterval(() => {
-              const currentTime = new Date().getTime();
-              const durationInSeconds = Math.floor((currentTime - startTime) / 1000); // Calculate duration
-              DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
-          }, 1000);
-          // **DURATION CALCULATION CHANGES END HERE**
-
-
-          // Start chart update interval after 3 seconds
-          setTimeout(() => {
-              chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000); // Update every 30 seconds
-              updateChartEvery30Seconds(); // Initial update call
-          }, 1000); // Start after 3 seconds
-
-          // Reset Co on system start
-          Co = null;
-          localStorage.removeItem('initialConcentration');
-
-          // Clear degradation chart data on system start
-          chartData.degradation = [];
-      }
-  }
-
-  // Function to stop the system
-  function stopSystem() {
-      if (isSystemRunning) {
-          isSystemRunning = false;
-          console.log("System stopped.");
-          localStorage.setItem('systemStatus', 'stopped'); // Save status to localStorage
-
-          // Save sensor values and status to localStorage
-          localStorage.setItem('phValue', phElement.textContent);
-          localStorage.setItem('turbidityValue', turbidityElement.textContent);
-          localStorage.setItem('tdsValue', tdsElement.textContent);
-          localStorage.setItem('degradationValue', degradationElement.textContent);
-          localStorage.setItem('statusValue', statusElement.textContent);
-          localStorage.setItem('statusColor', statusElement.style.color);
-
-          // Clear intervals
-          clearInterval(durationInterval);
-          clearInterval(chartUpdateInterval);
-
-          // Send stop command to IoT devices
-          socket.emit("publish", {
-              topic: "iot/control",
-              message: "0"
-          });
-          console.log("System stopped (0 sent to iot/control).");
-      }
-  }
-
-  // Function to reset the system
-  function resetSystem() {
-      isSystemRunning = false;
-      console.log("System reset.");
-      localStorage.setItem('systemStatus', 'reset');
-      localStorage.removeItem('startTime');
-      localStorage.removeItem('chartData_ph');
-      localStorage.removeItem('chartData_turbidity');
-      localStorage.removeItem('chartData_tds');
-      localStorage.removeItem('chartData_degradation');
-      localStorage.removeItem('chartLabels');
-      localStorage.removeItem('initialConcentration');
-      localStorage.removeItem('phValue');
-      localStorage.removeItem('turbidityValue');
-      localStorage.removeItem('tdsValue');
-      localStorage.removeItem('degradationValue');
-      localStorage.removeItem('statusValue');
-      localStorage.removeItem('statusColor');
-
-      Co = null;
-
-      clearInterval(durationInterval);
-      clearInterval(chartUpdateInterval);
-
-      DurasiElement.textContent = "0 menit 0 detik";
-      phElement.textContent = "Loading...";
-      turbidityElement.textContent = "Loading...";
-      tdsElement.textContent = "Loading...";
-      degradationElement.textContent = "Loading...";
-      statusElement.textContent = "Loading...";
-      statusElement.style.color = "black";
-
-      chartLabels.length = 0;
-      chartData.ph.length = 0;
-      chartData.turbidity.length = 0;
-      chartData.tds.length = 0;
-      chartData.degradation.length = 0;
-      dashboardChart.update();
-
-      // Send reset command to IoT devices
-      socket.emit("publish", {
-          topic: "iot/light1",
-          message: "0"
-      });
-      socket.emit("publish", {
-          topic: "iot/light2",
-          message: "0"
-      });
-      socket.emit("publish", {
-          topic: "iot/light3",
-          message: "0"
-      });
-      socket.emit("publish", {
-          topic: "iot/light4",
-          message: "0"
-      });
-
-      //**RESET COMMAND**
-      socket.emit("publish", {
-          topic: "iot/reset",
-          message: "1"
-      });
-      console.log("Published to iot/reset: 1");
-
-      // **RESET CONTROLLING ELEMENTS**
-      resetControllingElements(); // Call AFTER iot/reset
-
-      console.log("System reset. IoT devices turned off.");
-
-
-  }
-
-
-  // Function to reset Controlling elements to default
-  function resetControllingElements() {
-      // Lights
-      document.querySelectorAll('.light-toggle').forEach(button => {
-        button.setAttribute('data-state', '0');
-        button.textContent = 'OFF';
-      });
-
-      // Emit default values to MQTT (optional, but recommended)
-      // **IMPORTANT: ONLY PUBLISH THESE IF ABSOLUTELY NECESSARY.**
-      // Publishing them here *could* cause the duplication issue.
-      // If the device remembers its state, these publishes are not needed.
-      /*
-      socket.emit("publish", { topic: "iot/light1", message: "0" });
-      socket.emit("publish", { topic: "iot/light2", message: "0" });
-      socket.emit("publish", { topic: "iot/light3", message: "0" });
-      socket.emit("publish", { topic: "iot/light4", message: "0" });
-      socket.emit("publish", { topic: "iot/motorRPM", message: "0" });
-      */
-
-      console.log("Controlling elements reset to default.");
-  }
-
-  // Add event listener to the reset button
-  document.getElementById('resetButton').addEventListener('click', function (event) {
-      event.preventDefault();
-      resetSystem();
-  });
-
-  // Variables for managing system state
-  let savedConfig = {}; // Stores the last saved configuration
-
-  // Control buttons and elements
-  const controls = document.querySelectorAll("[data-topic]");
-  const saveButton = document.getElementById("saveButton");
-  const resetButton = document.getElementById("resetButton");
-  const startButton = document.getElementById("startButton");
-  const stopButton = document.getElementById("stopButton");
-
-  // Save button logic
-  saveButton.addEventListener("click", () => {
-      savedConfig = {}; // Reset saved configuration
-      controls.forEach(control => {
-          const topic = control.getAttribute("data-topic");
-          const value = control.value;
-          savedConfig[topic] = value;
-      });
-      console.log("Configuration saved:", savedConfig);
-  });
-
-  // Start button logic
-  startButton.addEventListener("click", () => {
-      if (Object.keys(savedConfig).length === 0) {
-          console.warn("No configuration saved. Please save the configuration first.");
-          return;
-      }
-
-      for (const [topic, message] of Object.entries(savedConfig)) {
-          socket.emit("publish", {
-              topic,
-              message
-          });
-          console.log(`Published saved config to ${topic}: ${message}`);
-      }
-
-      socket.emit("publish", {
-          topic: "iot/control",
-          message: "1"
-      });
-      socket.emit("publish", {
-          topic: "iot/reset",
-          message: "0"
-      });
-      console.log("System started (1 sent to iot/control).");
-
-      startSystem();
-  });
-
-  // Stop button logic
-  stopButton.addEventListener("click", () => {
-      stopSystem();
-  });
-
-  // Reset button logic
-  resetButton.addEventListener("click", () => {
-      resetSystem();
-  });
-
-  // Load system status from localStorage when the page loads
-  window.addEventListener('load', () => {
-      const savedStatus = localStorage.getItem('systemStatus');
-      const savedStartTime = localStorage.getItem('startTime');
-      const savedCo = localStorage.getItem('initialConcentration');
-
-      if (savedCo) {
-          Co = parseFloat(savedCo);
-      }
-
-      if (savedStatus === 'running') {
-          if (savedStartTime) {
-              // Calculate the duration from the saved start time
-              const startTime = parseInt(savedStartTime, 10);
-              const currentTime = new Date().getTime();
-              const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
-
-              // Update the duration display
-              DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
-
-              // Restart the duration interval
-              durationInterval = setInterval(() => {
-                  const currentTime = new Date().getTime();
-                  const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
-                  DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
-              }, 1000);
-
-              isSystemRunning = true; // Restore system running state
-              // Optionally restart the chart update interval here as well, if needed
-              setTimeout(() => {
-                  chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000); // Update every 30 seconds
-                  updateChartEvery30Seconds(); // Initial update call
-              }, 3000);
-          } else {
-              // If there's no saved start time, but the system was running, reset it
-              resetSystem();
-          }
-      } else if (savedStatus === 'stopped') {
-          isSystemRunning = false;
-
-          // Load saved sensor values and status
-          phElement.textContent = localStorage.getItem('phValue') || "Loading...";
-          turbidityElement.textContent = localStorage.getItem('turbidityValue') || "Loading...";
-          tdsElement.textContent = localStorage.getItem('tdsValue') || "Loading...";
-          degradationElement.textContent = localStorage.getItem('degradationValue') || "Loading...";
-          statusElement.textContent = localStorage.getItem('statusValue') || "Loading...";
-          statusElement.style.color = localStorage.getItem('statusColor') || "black";
-
-          // If there's a saved start time, calculate and display the duration
-          if (savedStartTime) {
-              const startTime = parseInt(savedStartTime, 10);
-              const currentTime = new Date().getTime();
-              const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
-              DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
-          }
-      } else if (savedStatus === 'reset') {
-          resetSystem();
-      }
-  });
-
-  let Co = parseFloat(localStorage.getItem('initialConcentration')) || null; // Load initial concentration from localStorage
-
-  // Listen to MQTT messages from the server
-  socket.on('mqttMessage', (data) => {
-      console.log("mqttMessage handler running");
-
-      const {
-          topic,
-          message
-      } = data;
-      console.log("Received MQTT message - Topic:", topic, "Message:", message);
-
-      if (topic === 'iot/control') {
-          if (message === '1') {
-              if (!isSystemRunning) {
-                  startSystem();
-              }
-          } else if (message === '0') {
-              if (isSystemRunning) {
-                  stopSystem();
-              }
-          } else if (message === '2') { // Added reset command
-              resetSystem();
-          }
-          return;
-      }
-
-      if (topic === 'iot/reset') {
-          console.log("Topic is iot/reset");
-          console.log("Message from iot/reset:", message);
-
-          if (message === '1') {
-              console.log("Received reset signal from iot/reset: 1.  Updating UI.");
-              // Update UI elements here...
-              DurasiElement.textContent = "0 menit 0 detik";
-              phElement.textContent = "Loading...";
-              turbidityElement.textContent = "Loading...";
-              tdsElement.textContent = "Loading...";
-              degradationElement.textContent = "Loading...";
-              statusElement.textContent = "Loading...";
-              statusElement.style.color = "black";
-
-              // Reset chart data
-              chartLabels.length = 0;
-              chartData.ph.length = 0;
-              chartData.turbidity.length = 0;
-              chartData.tds.length = 0;
-              chartData.degradation.length = 0;
-              dashboardChart.update();
-          } else if (message === '0') {
-              //dont do anything
-              console.log("reset trigger is 0, so dont reset the system")
-          }
-          return;
-      }
-
-      if (!isSystemRunning) return;
-
-      const value = parseFloat(message);
-
-      if (topic === 'iot/ph') {
-          phElement.textContent = value;
-          addChartData('ph', value);
-      } else if (topic === 'iot/turbidity') {
-          turbidityElement.textContent = `${value} NTU`;
-          addChartData('turbidity', value);
-      } else if (topic === 'iot/tds') {
-          tdsElement.textContent = `${value} ppm`;
-          addChartData('tds', value);
-
-          if (Co === null && value !== 0) {
-              Co = value;
-              localStorage.setItem('initialConcentration', Co);
-          }
-
-          if (Co !== null) {
-              const degradation = ((Co - value) / Co) * 100;
-              degradationElement.textContent = `${degradation.toFixed(2)}%`;
-              addChartData('degradation', degradation);
-          } else {
-              degradationElement.textContent = "N/A";
-          }
-      }
-
-      const ph = parseFloat(phElement.textContent) || 0;
-      const turbidity = parseFloat(turbidityElement.textContent) || 0;
-      const tds = parseFloat(tdsElement.textContent) || 0;
-
-      if (ph >= 6.5 && ph <= 8.5 && turbidity < 100 && tds < 100) {
-          statusElement.textContent = 'Aman';
-          statusElement.style.color = 'green';
-      } else {
-          statusElement.textContent = 'Tidak Aman';
-          statusElement.style.color = 'red';
-      }
-  });
-
-  // Function to send data to the server to save it in the background
-  function sendDataToServer(data) {
-      fetch('/save-data', { // Adjust the URL to your server endpoint
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(data)
-      })
-          .then(response => {
-              if (!response.ok) {
-                  throw new Error('Network response was not ok');
-              }
-              console.log('Data sent to server successfully');
-          })
-          .catch(error => {
-              console.error('Error sending data to server:', error);
-          });
-  }
-
-  // Modify the collectData function to also send data to the server
-  function collectData(time, turbidity, ph, tds, degradation) {
-      temporaryData.push({
-          time,
-          turbidity,
-          ph,
-          tds,
-          degradation
-      });
-      localStorage.setItem('temporaryData', JSON.stringify(temporaryData)); // Save data to localStorage
-
-      // Send the data to the server
-      sendDataToServer({
-          time,
-          turbidity,
-          ph,
-          tds,
-          degradation
-      });
-  }
-
-  // Example: Send chart data to the server periodically (e.g., every minute)
-  setInterval(() => {
-      // Combine chart data and labels into one object
-      const serverData = {
-          chartLabels: chartLabels,
-          chartData: chartData
-      };
-
-      sendDataToServer(serverData);
-  }, 60000); // Send data every 60 seconds (1 minute)
-
-  // Example: Send system status updates to the server
-  function sendSystemStatus(status) {
-      sendDataToServer({
-          systemStatus: status
-      });
-  }
-
-  // Modify the startSystem and stopSystem functions to send system status updates
-  function startSystem() {
-      if (!isSystemRunning) {
-          isSystemRunning = true;
-          console.log("System started.");
-          localStorage.setItem('systemStatus', 'running'); // Save status to localStorage
-
-          sendSystemStatus('running'); // Send system status update to the server
-
-          const startTime = new Date().getTime(); // Get the current timestamp
-          localStorage.setItem('startTime', startTime); // Save the start time
-
-          durationInterval = setInterval(() => {
-              const currentTime = new Date().getTime();
-              const durationInSeconds = Math.floor((currentTime - startTime) / 1000); // Calculate duration
-              DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
-          }, 1000);
-
-          setTimeout(() => {
-              chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000); // Update every 30 seconds
-              updateChartEvery30Seconds(); // Initial update call
-          }, 1000); // Start after 3 seconds
-      }
-  }
-
-  function stopSystem() {
-      if (isSystemRunning) {
-          isSystemRunning = false;
-          console.log("System stopped.");
-          localStorage.setItem('systemStatus', 'stopped'); // Save status to localStorage
-
-          sendSystemStatus('stopped'); // Send system status update to the server
-
-          localStorage.setItem('phValue', phElement.textContent);
-          localStorage.setItem('turbidityValue', turbidityElement.textContent);
-          localStorage.setItem('tdsValue', tdsElement.textContent);
-          localStorage.setItem('degradationValue', degradationElement.textContent);
-          localStorage.setItem('statusValue', statusElement.textContent);
-          localStorage.setItem('statusColor', statusElement.style.color);
-
-          clearInterval(durationInterval);
-          clearInterval(chartUpdateInterval);
-
-          socket.emit("publish", {
-              topic: "iot/control",
-              message: "0"
-          });
-          console.log("System stopped (0 sent to iot/control).");
-      }
-  }
-
-
-  // Light toggle functionality
-  document.querySelectorAll('.light-toggle').forEach(button => {
-      button.addEventListener('click', () => {
-          const topic = button.getAttribute('data-topic');
-          let state = button.getAttribute('data-state');
-          state = state === '0' ? '1' : '0'; // Toggle state
-          button.setAttribute('data-state', state);
-          button.textContent = state === '1' ? 'ON' : 'OFF';
-
-          // Change background color based on state
-          if (state === '1') {
-              button.style.backgroundColor = '#3e8e41'; // Darker green
-          } else {
-              button.style.backgroundColor = '#4CAF50'; // Original green
-          }
-
-          socket.emit("publish", {
-              topic: topic,
-              message: state
-          });
-          console.log(`Published to ${topic}: ${state}`);
-      });
-  });
-
-</script>
+    <!-- CONTROLLING SECTION -->
+    <div id="controlling" class="content">
+    <h1>Controlling</h1>
+    <fieldset>
+        <legend><i class="fas fa-lightbulb"></i> Control Lights:</legend>
+        <div class="light-control">
+            <label for="light1">Light 1:</label>
+            <button type="button" class="light-toggle" id="light1" data-topic="iot/light1" data-state="0">OFF</button>
+        </div>
+        <div class="light-control">
+            <label for="light2">Light 2:</label>
+            <button type="button" class="light-toggle" id="light2" data-topic="iot/light2" data-state="0">OFF</button>
+        </div>
+        <div class="light-control">
+            <label for="light3">Light 3:</label>
+            <button type="button" class="light-toggle" id="light3" data-topic="iot/light3" data-state="0">OFF</button>
+        </div>
+        <div class="light-control">
+            <label for="light4">Light 4:</label>
+            <button type="button" class="light-toggle" id="light4" data-topic="iot/light4" data-state="0">OFF</button>
+        </div>
+    </fieldset>
+
+    <!-- Buttons for Save, Reset, Start, and Stop -->
+    <button type="button" id="saveButton">Save</button>
+    <button type="reset" id="resetButton">Reset</button>
+    <button type="button" id="startButton">Start</button>
+    <button type="button" id="stopButton">Stop</button>
+    </div>
+
+    <script>
+    // Initialize Socket.IO
+    const socket = io();
+    let isSystemRunning = false;
+    let durationInterval = null; // Interval for updating duration
+    let chartUpdateInterval = null; // Interval for updating chart
+    // Elements to update
+    const phElement = document.getElementById('ph');
+    const turbidityElement = document.getElementById('turbidity');
+    const tdsElement = document.getElementById('tds');
+    const DurasiElement = document.getElementById('Durasi');
+    const degradationElement = document.getElementById('degradation');
+    const statusElement = document.getElementById('status');
+
+    // Chart.js setup
+    const ctx = document.getElementById('dashboardChart').getContext('2d');
+    const chartData = {
+        ph: JSON.parse(localStorage.getItem('chartData_ph')) || [], // Load chart data from localStorage
+        turbidity: JSON.parse(localStorage.getItem('chartData_turbidity')) || [],
+        tds: JSON.parse(localStorage.getItem('chartData_tds')) || [],
+        degradation: JSON.parse(localStorage.getItem('chartData_degradation')) || []
+    };
+    const chartLabels = JSON.parse(localStorage.getItem('chartLabels')) || []; // Load chart labels from localStorage
+
+    let currentDataset = 'ph';
+
+    const dashboardChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [
+                {
+                    label: 'pH Over Time',
+                    data: chartData.ph,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: 'rgba(75, 192, 192, 1)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 50,
+                easing: 'linear'
+            },
+            responsiveAnimationDuration: 0,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Value'
+                    },
+                    beginAtZero: true
+                }
+            },
+            elements: {
+                line: {
+                    tension: 0.2
+                },
+                point: {
+                    radius: 3
+                }
+            }
+        }
+    });
+
+    // Function to update chart dataset
+    function updateChart(selectedDataset) {
+        currentDataset = selectedDataset;
+        dashboardChart.data.datasets[0].data = chartData[selectedDataset];
+        dashboardChart.data.datasets[0].label = `${selectedDataset.charAt(0).toUpperCase() + selectedDataset.slice(1)} Over Time`;
+        dashboardChart.update();
+    }
+
+    // Helper function to get formatted time (HH:MM:SS)
+    function getFormattedTime() {
+        const now = new Date();
+        return `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+    }
+
+    // Temporary data storage
+    const tempData = {
+        ph: [],
+        turbidity: [],
+        tds: [],
+        degradation: []
+    };
+
+    // Function to add chart data immediately
+    function addChartData(dataset, value) {
+        if (!isSystemRunning) return; // Ensure updates only happen if the system is running
+        tempData[dataset].push(value);
+    }
+
+    // Function to update chart every 30 seconds starting at the 3rd second
+    function updateChartEvery30Seconds() {
+        if (!isSystemRunning) return; // Only update if the system is running
+
+        const formattedTime = getFormattedTime();
+        chartLabels.push(formattedTime);
+
+        Object.keys(tempData).forEach(dataset => {
+            if (tempData[dataset].length > 0) {
+                const avgValue = tempData[dataset].reduce((a, b) => a + b, 0) / tempData[dataset].length;
+                chartData[dataset].push(avgValue);
+                tempData[dataset] = []; // Clear temporary data
+            }
+        });
+
+        // Keep only the most recent 30 data points
+        if (chartLabels.length > 99999999999999999999999999999999999999999999999) {
+            chartLabels.shift();
+            chartData.ph.shift();
+            chartData.turbidity.shift();
+            chartData.tds.shift();
+            chartData.degradation.shift();
+        }
+
+        dashboardChart.data.labels = chartLabels;
+        dashboardChart.update();
+
+        // Save chart data and labels to localStorage
+        localStorage.setItem('chartData_ph', JSON.stringify(chartData.ph));
+        localStorage.setItem('chartData_turbidity', JSON.stringify(chartData.turbidity));
+        localStorage.setItem('chartData_tds', JSON.stringify(chartData.tds));
+        localStorage.setItem('chartData_degradation', JSON.stringify(chartData.degradation));
+        localStorage.setItem('chartLabels', JSON.stringify(chartLabels));
+    }
+
+    // Function to start the system
+    function startSystem() {
+        if (!isSystemRunning) {
+            isSystemRunning = true;
+            console.log("System started.");
+            localStorage.setItem('systemStatus', 'running'); // Save status to localStorage
+
+            // **DURATION CALCULATION CHANGES START HERE**
+            const startTime = new Date().getTime(); // Get the current timestamp
+            localStorage.setItem('startTime', startTime); // Save the start time
+
+            durationInterval = setInterval(() => {
+                const currentTime = new Date().getTime();
+                const durationInSeconds = Math.floor((currentTime - startTime) / 1000); // Calculate duration
+                DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
+            }, 1000);
+            // **DURATION CALCULATION CHANGES END HERE**
+
+
+            // Start chart update interval after 3 seconds
+            setTimeout(() => {
+                chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000); // Update every 30 seconds
+                updateChartEvery30Seconds(); // Initial update call
+            }, 1000); // Start after 3 seconds
+
+            // Reset Co on system start
+            Co = null;
+            localStorage.removeItem('initialConcentration');
+
+            // Clear degradation chart data on system start
+            chartData.degradation = [];
+        }
+    }
+
+    // Function to stop the system
+    function stopSystem() {
+        if (isSystemRunning) {
+            isSystemRunning = false;
+            console.log("System stopped.");
+            localStorage.setItem('systemStatus', 'stopped'); // Save status to localStorage
+
+            // Save sensor values and status to localStorage
+            localStorage.setItem('phValue', phElement.textContent);
+            localStorage.setItem('turbidityValue', turbidityElement.textContent);
+            localStorage.setItem('tdsValue', tdsElement.textContent);
+            localStorage.setItem('degradationValue', degradationElement.textContent);
+            localStorage.setItem('statusValue', statusElement.textContent);
+            localStorage.setItem('statusColor', statusElement.style.color);
+
+            // Clear intervals
+            clearInterval(durationInterval);
+            clearInterval(chartUpdateInterval);
+
+            // Send stop command to IoT devices
+            socket.emit("publish", {
+                topic: "iot/control",
+                message: "0"
+            });
+            console.log("System stopped (0 sent to iot/control).");
+        }
+    }
+
+    // Function to reset the system
+    function resetSystem() {
+        isSystemRunning = false;
+        console.log("System reset.");
+        localStorage.setItem('systemStatus', 'reset');
+        localStorage.removeItem('startTime');
+        localStorage.removeItem('chartData_ph');
+        localStorage.removeItem('chartData_turbidity');
+        localStorage.removeItem('chartData_tds');
+        localStorage.removeItem('chartData_degradation');
+        localStorage.removeItem('chartLabels');
+        localStorage.removeItem('initialConcentration');
+        localStorage.removeItem('phValue');
+        localStorage.removeItem('turbidityValue');
+        localStorage.removeItem('tdsValue');
+        localStorage.removeItem('degradationValue');
+        localStorage.removeItem('statusValue');
+        localStorage.removeItem('statusColor');
+
+        Co = null;
+
+        clearInterval(durationInterval);
+        clearInterval(chartUpdateInterval);
+
+        DurasiElement.textContent = "0 menit 0 detik";
+        phElement.textContent = "Loading...";
+        turbidityElement.textContent = "Loading...";
+        tdsElement.textContent = "Loading...";
+        degradationElement.textContent = "Loading...";
+        statusElement.textContent = "Loading...";
+        statusElement.style.color = "black";
+
+        chartLabels.length = 0;
+        chartData.ph.length = 0;
+        chartData.turbidity.length = 0;
+        chartData.tds.length = 0;
+        chartData.degradation.length = 0;
+        dashboardChart.update();
+
+        // Send reset command to IoT devices
+        socket.emit("publish", {
+            topic: "iot/light1",
+            message: "0"
+        });
+        socket.emit("publish", {
+            topic: "iot/light2",
+            message: "0"
+        });
+        socket.emit("publish", {
+            topic: "iot/light3",
+            message: "0"
+        });
+        socket.emit("publish", {
+            topic: "iot/light4",
+            message: "0"
+        });
+
+        //**RESET COMMAND**
+        socket.emit("publish", {
+            topic: "iot/reset",
+            message: "1"
+        });
+        console.log("Published to iot/reset: 1");
+
+        // **RESET CONTROLLING ELEMENTS**
+        resetControllingElements(); // Call AFTER iot/reset
+
+        console.log("System reset. IoT devices turned off.");
+
+    }
+
+    // Function to reset Controlling elements to default
+    function resetControllingElements() {
+        // Lights
+        document.querySelectorAll('.light-toggle').forEach(button => {
+            button.setAttribute('data-state', '0');
+            button.textContent = 'OFF';
+        });
+
+        console.log("Controlling elements reset to default.");
+    }
+
+    // Add event listener to the reset button
+    document.getElementById('resetButton').addEventListener('click', function (event) {
+        event.preventDefault();
+        resetSystem();
+    });
+
+    // Variables for managing system state
+    let savedConfig = {}; // Stores the last saved configuration
+
+    // Control buttons and elements
+    const controls = document.querySelectorAll("[data-topic]");
+    const saveButton = document.getElementById("saveButton");
+    const resetButton = document.getElementById("resetButton");
+    const startButton = document.getElementById("startButton");
+    const stopButton = document.getElementById("stopButton");
+
+    // Save button logic
+    saveButton.addEventListener("click", () => {
+        savedConfig = {}; // Reset saved configuration
+        controls.forEach(control => {
+            const topic = control.getAttribute("data-topic");
+            const value = control.value;
+            savedConfig[topic] = value;
+        });
+        console.log("Configuration saved:", savedConfig);
+    });
+
+    // Start button logic
+    startButton.addEventListener("click", () => {
+        if (Object.keys(savedConfig).length === 0) {
+            console.warn("No configuration saved. Please save the configuration first.");
+            return;
+        }
+
+        for (const [topic, message] of Object.entries(savedConfig)) {
+            socket.emit("publish", {
+                topic,
+                message
+            });
+            console.log(`Published saved config to ${topic}: ${message}`);
+        }
+
+        socket.emit("publish", {
+            topic: "iot/control",
+            message: "1"
+        });
+        socket.emit("publish", {
+            topic: "iot/reset",
+            message: "0"
+        });
+        console.log("System started (1 sent to iot/control).");
+
+        startSystem();
+    });
+
+    // Stop button logic
+    stopButton.addEventListener("click", () => {
+        stopSystem();
+    });
+
+    // Reset button logic
+    resetButton.addEventListener("click", () => {
+        resetSystem();
+    });
+
+    // Load system status from localStorage when the page loads
+    window.addEventListener('load', () => {
+        const savedStatus = localStorage.getItem('systemStatus');
+        const savedStartTime = localStorage.getItem('startTime');
+        const savedCo = localStorage.getItem('initialConcentration');
+
+        if (savedCo) {
+            Co = parseFloat(savedCo);
+        }
+
+        if (savedStatus === 'running') {
+            if (savedStartTime) {
+                // Calculate the duration from the saved start time
+                const startTime = parseInt(savedStartTime, 10);
+                const currentTime = new Date().getTime();
+                const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
+
+                // Update the duration display
+                DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
+
+                // Restart the duration interval
+                durationInterval = setInterval(() => {
+                    const currentTime = new Date().getTime();
+                    const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
+                    DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
+                }, 1000);
+
+                isSystemRunning = true; // Restore system running state
+                // Optionally restart the chart update interval here as well, if needed
+                setTimeout(() => {
+                    chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000); // Update every 30 seconds
+                    updateChartEvery30Seconds(); // Initial update call
+                }, 3000);
+            } else {
+                // If there's no saved start time, but the system was running, reset it
+                resetSystem();
+            }
+        } else if (savedStatus === 'stopped') {
+            isSystemRunning = false;
+
+            // Load saved sensor values and status
+            phElement.textContent = localStorage.getItem('phValue') || "Loading...";
+            turbidityElement.textContent = localStorage.getItem('turbidityValue') || "Loading...";
+            tdsElement.textContent = localStorage.getItem('tdsValue') || "Loading...";
+            degradationElement.textContent = localStorage.getItem('degradationValue') || "Loading...";
+            statusElement.textContent = localStorage.getItem('statusValue') || "Loading...";
+            statusElement.style.color = localStorage.getItem('statusColor') || "black";
+
+            // If there's a saved start time, calculate and display the duration
+            if (savedStartTime) {
+                const startTime = parseInt(savedStartTime, 10);
+                const currentTime = new Date().getTime();
+                const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
+                DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
+            }
+        } else if (savedStatus === 'reset') {
+            resetSystem();
+        }
+    });
+
+    let Co = parseFloat(localStorage.getItem('initialConcentration')) || null; // Load initial concentration from localStorage
+
+    // Listen to MQTT messages from the server
+    socket.on('mqttMessage', (data) => {
+        console.log("mqttMessage handler running");
+
+        const {
+            topic,
+            message
+        } = data;
+        console.log("Received MQTT message - Topic:", topic, "Message:", message);
+
+        if (topic === 'iot/control') {
+            if (message === '1') {
+                if (!isSystemRunning) {
+                    startSystem();
+                }
+            } else if (message === '0') {
+                if (isSystemRunning) {
+                    stopSystem();
+                }
+            } else if (message === '2') { // Added reset command
+                resetSystem();
+            }
+            return;
+        }
+
+        if (topic === 'iot/reset') {
+            console.log("Topic is iot/reset");
+            console.log("Message from iot/reset:", message);
+
+            if (message === '1') {
+                console.log("Received reset signal from iot/reset: 1.  Updating UI.");
+                // Update UI elements here...
+                DurasiElement.textContent = "0 menit 0 detik";
+                phElement.textContent = "Loading...";
+                turbidityElement.textContent = "Loading...";
+                tdsElement.textContent = "Loading...";
+                degradationElement.textContent = "Loading...";
+                statusElement.textContent = "Loading...";
+                statusElement.style.color = "black";
+
+                // Reset chart data
+                chartLabels.length = 0;
+                chartData.ph.length = 0;
+                chartData.turbidity.length = 0;
+                chartData.tds.length = 0;
+                chartData.degradation.length = 0;
+                dashboardChart.update();
+            } else if (message === '0') {
+                //dont do anything
+                console.log("reset trigger is 0, so dont reset the system")
+            }
+            return;
+        }
+
+        if (!isSystemRunning) return;
+
+        const value = parseFloat(message);
+
+        if (topic === 'iot/ph') {
+            phElement.textContent = value;
+            addChartData('ph', value);
+        } else if (topic === 'iot/turbidity') {
+            turbidityElement.textContent = `${value} NTU`;
+            addChartData('turbidity', value);
+        } else if (topic === 'iot/tds') {
+            tdsElement.textContent = `${value} ppm`;
+            addChartData('tds', value);
+
+            if (Co === null && value !== 0) {
+                Co = value;
+                localStorage.setItem('initialConcentration', Co);
+            }
+
+            if (Co !== null) {
+                const degradation = ((Co - value) / Co) * 100;
+                degradationElement.textContent = `${degradation.toFixed(2)}%`;
+                addChartData('degradation', degradation);
+            } else {
+                degradationElement.textContent = "N/A";
+            }
+        }
+
+        const ph = parseFloat(phElement.textContent) || 0;
+        const turbidity = parseFloat(turbidityElement.textContent) || 0;
+        const tds = parseFloat(tdsElement.textContent) || 0;
+
+        if (ph >= 6.5 && ph <= 8.5 && turbidity < 100 && tds < 100) {
+            statusElement.textContent = 'Aman';
+            statusElement.style.color = 'green';
+        } else {
+            statusElement.textContent = 'Tidak Aman';
+            statusElement.style.color = 'red';
+        }
+    });
+
+    // Function to send data to the server to save it in the background
+    function sendDataToServer(data) {
+        fetch('/save-data', { // Adjust the URL to your server endpoint
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                console.log('Data sent to server successfully');
+            })
+            .catch(error => {
+                console.error('Error sending data to server:', error);
+            });
+    }
+
+    // Modify the collectData function to also send data to the server
+    function collectData(time, turbidity, ph, tds, degradation) {
+        temporaryData.push({
+            time,
+            turbidity,
+            ph,
+            tds,
+            degradation
+        });
+        localStorage.setItem('temporaryData', JSON.stringify(temporaryData)); // Save data to localStorage
+
+        // Send the data to the server
+        sendDataToServer({
+            time,
+            turbidity,
+            ph,
+            tds,
+            degradation
+        });
+    }
+
+    // Example: Send chart data to the server periodically (e.g., every minute)
+    setInterval(() => {
+        // Combine chart data and labels into one object
+        const serverData = {
+            chartLabels: chartLabels,
+            chartData: chartData
+        };
+
+        sendDataToServer(serverData);
+    }, 60000); // Send data every 60 seconds (1 minute)
+
+    // Example: Send system status updates to the server
+    function sendSystemStatus(status) {
+        sendDataToServer({
+            systemStatus: status
+        });
+    }
+
+    // Modify the startSystem and stopSystem functions to send system status updates
+    function startSystem() {
+        if (!isSystemRunning) {
+            isSystemRunning = true;
+            console.log("System started.");
+            localStorage.setItem('systemStatus', 'running'); // Save status to localStorage
+
+            sendSystemStatus('running'); // Send system status update to the server
+
+            const startTime = new Date().getTime(); // Get the current timestamp
+            localStorage.setItem('startTime', startTime); // Save the start time
+
+            durationInterval = setInterval(() => {
+                const currentTime = new Date().getTime();
+                const durationInSeconds = Math.floor((currentTime - startTime) / 1000); // Calculate duration
+                DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
+            }, 1000);
+
+            setTimeout(() => {
+                chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000); // Update every 30 seconds
+                updateChartEvery30Seconds(); // Initial update call
+            }, 1000); // Start after 3 seconds
+        }
+    }
+
+    function stopSystem() {
+        if (isSystemRunning) {
+            isSystemRunning = false;
+            console.log("System stopped.");
+            localStorage.setItem('systemStatus', 'stopped'); // Save status to localStorage
+
+            sendSystemStatus('stopped'); // Send system status update to the server
+
+            localStorage.setItem('phValue', phElement.textContent);
+            localStorage.setItem('turbidityValue', turbidityElement.textContent);
+            localStorage.setItem('tdsValue', tdsElement.textContent);
+            localStorage.setItem('degradationValue', degradationElement.textContent);
+            localStorage.setItem('statusValue', statusElement.textContent);
+            localStorage.setItem('statusColor', statusElement.style.color);
+
+            clearInterval(durationInterval);
+            clearInterval(chartUpdateInterval);
+
+            socket.emit("publish", {
+                topic: "iot/control",
+                message: "0"
+            });
+            console.log("System stopped (0 sent to iot/control).");
+        }
+    }
+
+
+    // Light toggle functionality
+    document.querySelectorAll('.light-toggle').forEach(button => {
+        button.addEventListener('click', () => {
+            const topic = button.getAttribute('data-topic');
+            let state = button.getAttribute('data-state');
+            state = state === '0' ? '1' : '0'; // Toggle state
+            button.setAttribute('data-state', state);
+            button.textContent = state === '1' ? 'ON' : 'OFF';
+
+            // Change background color based on state
+            if (state === '1') {
+                button.style.backgroundColor = '#3e8e41'; // Darker green
+            } else {
+                button.style.backgroundColor = '#4CAF50'; // Original green
+            }
+
+            socket.emit("publish", {
+                topic: topic,
+                message: state
+            });
+            console.log(`Published to ${topic}: ${state}`);
+        });
+    });
+    </script>
 
     <!-- Monitoring Section -->
     <div id="monitoring" class="content">
@@ -916,13 +908,16 @@
         <script>
             const dataTableBody = document.getElementById('data-table-body');
             let temporaryData = JSON.parse(localStorage.getItem('temporaryData')) || []; // Load data from localStorage
-
+        
+            // Initially hide the table
+            dataTableBody.style.display = 'none';
+        
             // Function to collect data into the array
             function collectData(time, turbidity, ph, tds, degradation) {
                 temporaryData.push({ time, turbidity, ph, tds, degradation });
                 localStorage.setItem('temporaryData', JSON.stringify(temporaryData)); // Save data to localStorage
             }
-
+        
             // Function to update the table with the collected data
             function updateTable(data = temporaryData) {
                 dataTableBody.innerHTML = '';
@@ -937,22 +932,28 @@
                     `;
                     dataTableBody.appendChild(row);
                 });
+        
+                // Show the table
+                dataTableBody.style.display = 'table'; // Or 'block' depending on your table's CSS
             }
-
+        
             // Function to reset the table and temporary data
             function resetTable() {
                 dataTableBody.innerHTML = '';
                 temporaryData = [];
                 localStorage.removeItem('temporaryData'); // Remove data from localStorage
+        
+                // Hide the table after reset
+                dataTableBody.style.display = 'none';
             }
-
+        
             // MQTT message handler
             socket.on('mqttMessage', (data) => {
                 if (!isSystemRunning) return;
-
+        
                 const { topic, message } = data;
                 const currentTime = new Date().toLocaleTimeString();
-
+        
                 switch (topic) {
                     case 'iot/ph':
                         phElement.textContent = parseFloat(message).toFixed(2);
@@ -964,39 +965,39 @@
                         tdsElement.textContent = parseFloat(message).toFixed(2);
                         break;
                 }
-
+        
                 const ph = parseFloat(phElement.textContent) || 0;
                 const turbidity = parseFloat(turbidityElement.textContent) || 0;
                 const tds = parseFloat(tdsElement.textContent) || 0;
                 const degradation = parseFloat(degradationElement.textContent) || 0;
-
+        
                 collectData(currentTime, turbidity, ph, tds, degradation.toFixed(2));
-            } );
-
+            });
+        
             // Function to generate and view TXT content
             document.getElementById('view-txt').addEventListener('click', () => {
                 updateTable();
             });
-
+        
             // Function to generate and view Excel content
             document.getElementById('view-excel').addEventListener('click', () => {
                 updateTable();
             });
-
+        
             // Function to download data as TXT
             document.getElementById('download-txt').addEventListener('click', () => {
                 let txtContent = 'Time\tTurbidity (NTU)\tpH\tTDS (ppm)\tDegradation (%)\n';
                 temporaryData.forEach(data => {
                     txtContent += `${data.time}\t${data.turbidity}\t${data.ph}\t${data.tds}\t${data.degradation}\n`;
                 });
-
+        
                 const blob = new Blob([txtContent], { type: 'text/plain' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
                 link.download = 'sensor_data.txt';
                 link.click();
             });
-
+        
             // Function to download data as Excel
             document.getElementById('download-excel').addEventListener('click', () => {
                 let excelContent = '<table><tr><th>Time</th><th>Turbidity (NTU)</th><th>pH</th><th>TDS (ppm)</th><th>Degradation (%)</th></tr>';
@@ -1004,23 +1005,21 @@
                     excelContent += `<tr><td>${data.time}</td><td>${data.turbidity}</td><td>${data.ph}</td><td>${data.tds}</td><td>${data.degradation}</td></tr>`;
                 });
                 excelContent += '</table>';
-
+        
                 const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
                 link.download = 'sensor_data.xls';
                 link.click();
             });
-
-            // Load table data from localStorage when the page loads
-            window.addEventListener('load', () => {
-                updateTable(); // Update table with saved data
-            });
-
+        
             // Reset table when reset button is clicked
             document.getElementById('resetButton').addEventListener('click', () => {
                 resetTable(); // Reset table and clear localStorage data
             });
+        
+            // Optionally, update the table on page load with any existing data:
+            // updateTable();
         </script>
     </div>
 
