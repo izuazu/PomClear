@@ -1,743 +1,986 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PomClear</title>
 
-    <!-- Google Font for Icons -->
-    <link href="https://fonts.googleapis.com/css?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
-    <!-- External CSS -->
+    <link href="https://fonts.googleapis.com/css?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Socket.IO -->
     <script src="/socket.io/socket.io.js"></script>
 
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-    <!-- Firebase Configuration -->
     <script src="firebase-config.js"></script>
+
 </head>
+
 <body>
 
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <img src="images/logo.png" alt="PomClear Logo" class="logo">
-            <h2>PomClear</h2>
-        </div>
-        <ul class="sidebar-links">
-            <li><a href="#" data-target="dashboard"><span class="material-symbols-outlined">dashboard</span>Dashboard</a></li>
-            <li><a href="#" data-target="controlling"><span class="material-symbols-outlined">speed</span>Controlling</a></li>
-            <li><a href="#" data-target="monitoring"><span class="material-symbols-outlined">monitoring</span>Monitoring</a></li>
-            <li><a href="#" data-target="download"><span class="material-symbols-outlined">download</span>Download</a></li>
-            <li><a href="#" data-target="info"><span class="material-symbols-outlined">info</span>Info</a></li>
-        </ul>
-    </aside>
-    <div class="main-content">
+    <div id="auth-container" class="auth-container">
+        <form id="login-form" class="auth-form">
+            <h2>Login</h2>
+            <label for="login-email">Email:</label>
+            <input type="email" id="login-email" required>
+            <label for="login-password">Password:</label>
+            <input type="password" id="login-password" required>
+            <div class="forgot-password">
+                <a href="#" id="forgot-password-link">Forgot Password?</a>
+            </div>
+            <button type="submit">Login</button>
+            <div id="login-error" class="error hidden"></div>
+            <p style="text-align: center; margin-top: 10px;">Don't have an account? <a href="#"
+                    id="register-link">Register</a></p>
+        </form>
 
-        <!-- Dashboard Section -->
-        <div id="dashboard" class="content active">
-            <h2>Dashboard</h2>
-            <div class="dashboard-info">
-                <div class="info-item">
-                    <h4>pH</h4>
-                    <p id="ph">Loading...</p>
+        <form id="register-form" class="auth-form hidden">
+            <h2>Register</h2>
+            <label for="register-email">Email:</label>
+            <input type="email" id="register-email" required>
+            <label for="register-password">Password:</label>
+            <input type="password" id="register-password" required>
+            <button type="submit">Register</button>
+            <div id="register-error" class="error hidden"></div>
+            <p style="text-align: center; margin-top: 10px;">Already have an account? <a href="#"
+                    id="login-link">Login</a></p>
+        </form>
+
+        <form id="forgot-password-form" class="auth-form hidden">
+            <h2>Reset Password</h2>
+            <label for="reset-email">Email:</label>
+            <input type="email" id="reset-email" required>
+            <button type="submit">Send Reset Email</button>
+            <div id="reset-error" class="error hidden"></div>
+            <p style="text-align: center; margin-top: 10px;"><a href="#" id="back-to-login">Back to Login</a></p>
+        </form>
+    </div>
+
+    <div id="main-app" style="display: none;">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="images/logo.png" alt="PomClear Logo" class="logo">
+                <h2>PomClear</h2>
+            </div>
+            <ul class="sidebar-links">
+                <li><a href="#" data-target="dashboard"><span class="material-symbols-outlined">dashboard</span>Dashboard</a></li>
+                <li><a href="#" data-target="controlling"><span class="material-symbols-outlined">speed</span>Controlling</a></li>
+                <li><a href="#" data-target="monitoring"><span class="material-symbols-outlined">monitoring</span>Monitoring</a></li>
+                <li><a href="#" data-target="download"><span class="material-symbols-outlined">download</span>Download</a></li>
+                <li><a href="#" data-target="info"><span class="material-symbols-outlined">info</span>Info</a></li>
+    
+                <li>
+                    <div class="account-info">
+                        <a href="#" id="logout-button">
+                            <span class="material-symbols-outlined">Logout</span>Logout
+                        </a>
+                    </div>
+                </li>
+            </ul>
+        </aside>
+
+        <div class="main-content">
+
+            <div id="dashboard" class="content active">
+                <div class="dashboard-header">
+                    <h2>Dashboard</h2>
+                    <p id="account-name" class="account-name">Account: <span id="user-email-dashboard"></span></p>
                 </div>
-                <div class="info-item">
-                    <h4>Turbidity</h4>
-                    <p id="turbidity">Loading...</p>
+                <div class="dashboard-info">
+                    <div class="info-item">
+                        <h4>pH</h4>
+                        <p id="ph">Loading...</p>
+                    </div>
+                    <div class="info-item">
+                        <h4>Turbidity</h4>
+                        <p id="turbidity">Loading...</p>
+                    </div>
+                    <div class="info-item">
+                        <h4>TDS</h4>
+                        <p id="tds">Loading...</p>
+                    </div>
+                    <div class="info-item">
+                        <h4>Durasi</h4>
+                        <p id="Durasi">Loading...</p>
+                    </div>
+                    <div class="info-item">
+                        <h4>Degradasi</h4>
+                        <p id="degradation">Loading...</p>
+                    </div>
+                    <div class="info-item">
+                        <h4>Status</h4>
+                        <p id="status">Loading...</p>
+                    </div>
                 </div>
-                <div class="info-item">
-                    <h4>TDS</h4>
-                    <p id="tds">Loading...</p>
-                </div>
-                <div class="info-item">
-                    <h4>Durasi</h4>
-                    <p id="Durasi">Loading...</p>
-                </div>
-                <div class="info-item">
-                    <h4>Degradasi</h4>
-                    <p id="degradation">Loading...</p>
-                </div>
-                <div class="info-item">
-                    <h4>Status</h4>
-                    <p id="status">Loading...</p>
+
+                <div class="chart-dashboard">
+                    <div class="chart-controls">
+                        <select id="chartSelector" onchange="updateChart(this.value)">
+                            <option value="ph">pH</option>
+                            <option value="turbidity">Turbidity</option>
+                            <option value="tds">TDS</option>
+                            <option value="degradation">Degradation</option>
+                        </select>
+                    </div>
+                    <canvas id="dashboardChart"></canvas>
                 </div>
             </div>
 
-            <!-- Chart Section -->
-            <div class="chart-dashboard">
-                <div class="chart-controls">
-                    <select id="chartSelector" onchange="updateChart(this.value)">
-                        <option value="ph">pH</option>
-                        <option value="turbidity">Turbidity</option>
-                        <option value="tds">TDS</option>
-                        <option value="degradation">Degradation</option>
-                    </select>
-                </div>
-                <canvas id="dashboardChart"></canvas>
+            <div id="controlling" class="content">
+                <h1>Controlling</h1>
+                <fieldset>
+                    <legend><i class="fas fa-lightbulb"></i> Control Lights:</legend>
+                    <div class="light-control">
+                        <label for="light1">Light 1:</label>
+                        <button type="button" class="light-toggle" id="light1" data-topic="iot/light1"
+                            data-state="0">OFF</button>
+                    </div>
+                    <div class="light-control">
+                        <label for="light2">Light 2:</label>
+                        <button type="button" class="light-toggle" id="light2" data-topic="iot/light2"
+                            data-state="0">OFF</button>
+                    </div>
+                    <div class="light-control">
+                        <label for="light3">Light 3:</label>
+                        <button type="button" class="light-toggle" id="light3" data-topic="iot/light3"
+                            data-state="0">OFF</button>
+                    </div>
+                    <div class="light-control">
+                        <label for="light4">Light 4:</label>
+                        <button type="button" class="light-toggle" id="light4" data-topic="iot/light4"
+                            data-state="0">OFF</button>
+                    </div>
+                </fieldset>
+
+                <button type="button" id="saveButton">Save</button>
+                <button type="reset" id="resetButton">Reset</button>
+                <button type="button" id="startButton">Start</button>
+                <button type="button" id="stopButton">Stop</button>
             </div>
+
+            <div id="monitoring" class="content">
+                <h1>Monitoring</h1>
+                <div class="chart-grid">
+                    <div class="chart-monitoring">
+                        <canvas id="phChart"></canvas>
+                    </div>
+                    <div class="chart-monitoring">
+                        <canvas id="turbidityChart"></canvas>
+                    </div>
+                    <div class="chart-monitoring">
+                        <canvas id="tdsChart"></canvas>
+                    </div>
+                    <div class="chart-monitoring">
+                        <canvas id="degradationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="download" class="content">
+                <h1>Download</h1>
+                <table class="excel-style-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Turbidity (NTU)</th>
+                            <th>pH</th>
+                            <th>TDS (ppm)</th>
+                            <th>Degradation (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table-body">
+                    </tbody>
+                </table>
+                <div class="download-buttons">
+                    <button id="download-txt" class="btn">Download as TXT</button>
+                    <button id="download-excel" class="btn">Download as Excel</button>
+                    <button id="view-txt" class="btn">View Generated TXT</button>
+                    <button id="view-excel" class="btn">View Generated Excel</button>
+                </div>
+            </div>
+
+            <div id="info" class="content">
+                <h1>Info</h1>
+                <p>PomClear: Photocatalytic Degradation of Palm Oil Mill Secondary Effluent (POMSE) using TiO2
+                    Nanoparticles with Real-Time Monitoring</p>
+            </div>
+
         </div>
+    </div>
 
-        <!-- CONTROLLING SECTION -->
-        <div id="controlling" class="content">
-            <h1>Controlling</h1>
-            <fieldset>
-                <legend><i class="fas fa-lightbulb"></i> Control Lights:</legend>
-                <div class="light-control">
-                    <label for="light1">Light 1:</label>
-                    <button type="button" class="light-toggle" id="light1" data-topic="iot/light1" data-state="0">OFF</button>
-                </div>
-                <div class="light-control">
-                    <label for="light2">Light 2:</label>
-                    <button type="button" class="light-toggle" id="light2" data-topic="iot/light2" data-state="0">OFF</button>
-                </div>
-                <div class="light-control">
-                    <label for="light3">Light 3:</label>
-                    <button type="button" class="light-toggle" id="light3" data-topic="iot/light3" data-state="0">OFF</button>
-                </div>
-                <div class="light-control">
-                    <label for="light4">Light 4:</label>
-                    <button type="button" class="light-toggle" id="light4" data-topic="iot/light4" data-state="0">OFF</button>
-                </div>
-            </fieldset>
+    <script>
+        const auth = firebase.auth();
 
-            <!-- Buttons for Save, Reset, Start, and Stop -->
-            <button type="button" id="saveButton">Save</button>
-            <button type="reset" id="resetButton">Reset</button>
-            <button type="button" id="startButton">Start</button>
-            <button type="button" id="stopButton">Stop</button>
-        </div>
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const forgotPasswordForm = document.getElementById('forgot-password-form');
 
-        <script>
-            // Initialize Socket.IO
-            const socket = io();
-            let isSystemRunning = false;
-            let durationInterval = null; // Interval for updating duration
-            let chartUpdateInterval = null; // Interval for updating chart
-            // Elements to update
-            const phElement = document.getElementById('ph');
-            const turbidityElement = document.getElementById('turbidity');
-            const tdsElement = document.getElementById('tds');
-            const DurasiElement = document.getElementById('Durasi');
-            const degradationElement = document.getElementById('degradation');
-            const statusElement = document.getElementById('status');
+        const registerLink = document.getElementById('register-link');
+        const loginLink = document.getElementById('login-link');
+        const forgotPasswordLink = document.getElementById('forgot-password-link');
+        const backToLoginLink = document.getElementById('back-to-login');
 
-            // Chart.js setup
-            const ctx = document.getElementById('dashboardChart').getContext('2d');
-            const chartData = {
-                ph: JSON.parse(localStorage.getItem('chartData_ph')) || [], // Load chart data from localStorage
-                turbidity: JSON.parse(localStorage.getItem('chartData_turbidity')) || [],
-                tds: JSON.parse(localStorage.getItem('chartData_tds')) || [],
-                degradation: JSON.parse(localStorage.getItem('chartData_degradation')) || []
-            };
-            const chartLabels = JSON.parse(localStorage.getItem('chartLabels')) || []; // Load chart labels from localStorage
+        const authContainer = document.getElementById('auth-container');
+        const mainApp = document.getElementById('main-app');
+        const userEmailDisplay = document.getElementById('user-email');
+        const userNameDisplay = document.getElementById('user-name');
+        const logoutButton = document.getElementById('logout-button');
+        const userEmailDashboard = document.getElementById('user-email-dashboard');
 
-            let currentDataset = 'ph';
+        function showForm(formId) {
+            const forms = document.querySelectorAll('.auth-form');
+            forms.forEach(form => form.classList.add('hidden'));
+            document.getElementById(formId).classList.remove('hidden');
+        }
 
-            const dashboardChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: chartLabels,
-                    datasets: [
-                        {
-                            label: 'pH Over Time',
-                            data: chartData.ph,
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 2,
-                            tension: 0.4,
-                            pointRadius: 4,
-                            pointBackgroundColor: 'rgba(75, 192, 192, 1)'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: {
-                        duration: 50,
-                        easing: 'linear'
-                    },
-                    responsiveAnimationDuration: 0,
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Time'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Value'
-                            },
-                            beginAtZero: true
-                        }
-                    },
-                    elements: {
-                        line: {
-                            tension: 0.2
-                        },
-                        point: {
-                            radius: 3
-                        }
+        registerLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showForm('register-form');
+        });
+
+        loginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showForm('login-form');
+        });
+
+        forgotPasswordLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showForm('forgot-password-form');
+        });
+
+        backToLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showForm('login-form');
+        });
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    console.log("Login successful:", user);
+                    // After successful login, show the main app and activate the dashboard.
+                    showMainApp(user);
+                })
+                .catch((error) => {
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    document.getElementById('login-error').textContent = errorMessage;
+                    document.getElementById('login-error').classList.remove('hidden');
+                    console.error("Login error:", errorCode, errorMessage);
+                });
+        });
+
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    console.log("Registration successful:", user);
+                    showForm('login-form');
+                })
+                .catch((error) => {
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    document.getElementById('register-error').textContent = errorMessage;
+                    document.getElementById('register-error').classList.remove('hidden');
+                    console.error("Registration error:", errorCode, errorMessage);
+                });
+        });
+
+        forgotPasswordForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('reset-email').value;
+
+            auth.sendPasswordResetEmail(email)
+                .then(() => {
+                    alert("Password reset email sent! Check your inbox.");
+                    showForm('login-form');
+                })
+                .catch((error) => {
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    document.getElementById('reset-error').textContent = errorMessage;
+                    document.getElementById('reset-error').classList.remove('hidden');
+                    console.error("Reset password error:", errorCode, errorMessage);
+                });
+        });
+
+        logoutButton.addEventListener('click', () => {
+            auth.signOut()
+                .then(() => {
+                    console.log("Logout successful");
+                    // Optional: Clear any data or reset UI here.
+                })
+                .catch((error) => {
+                    console.error("Logout error:", error);
+                });
+        });
+
+        // Function to show the main app and activate the dashboard.
+        function showMainApp(user) {
+            authContainer.style.display = 'none';
+            mainApp.style.display = 'block';
+            userEmailDashboard.textContent = user.email; // Display user email in dashboard
+
+            // Activate the dashboard content
+            activateContent('dashboard');
+
+            // Store email in local storage for later use
+            localStorage.setItem('userEmail', user.email);
+            const email_storage = localStorage.getItem('userEmail');
+
+            // Send user email to server
+            sendDataToServer({ userEmail: email_storage });
+
+            // Emit the 'set-email' event to the server with the email
+            socket.emit('set-email', { email_storage: email_storage });
+        }
+
+        // Function to activate content based on the data-target attribute
+        function activateContent(targetId) {
+            const contents = document.querySelectorAll('.content');
+            contents.forEach(content => content.classList.remove('active'));
+            document.getElementById(targetId).classList.add('active');
+        }
+
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                console.log("User is signed in:", user);
+                showMainApp(user);
+            } else {
+                console.log("User is signed out");
+                authContainer.style.display = 'flex';
+                mainApp.style.display = 'none';
+                localStorage.removeItem('userEmail');
+            }
+        });
+
+        const socket = io();
+        let isSystemRunning = false;
+        let durationInterval = null;
+        let chartUpdateInterval = null;
+        const phElement = document.getElementById('ph');
+        const turbidityElement = document.getElementById('turbidity');
+        const tdsElement = document.getElementById('tds');
+        const DurasiElement = document.getElementById('Durasi');
+        const degradationElement = document.getElementById('degradation');
+        const statusElement = document.getElementById('status');
+
+        const ctx = document.getElementById('dashboardChart').getContext('2d');
+        const chartData = {
+            ph: JSON.parse(localStorage.getItem('chartData_ph')) || [],
+            turbidity: JSON.parse(localStorage.getItem('chartData_turbidity')) || [],
+            tds: JSON.parse(localStorage.getItem('chartData_tds')) || [],
+            degradation: JSON.parse(localStorage.getItem('chartData_degradation')) || []
+        };
+        const chartLabels = JSON.parse(localStorage.getItem('chartLabels')) || [];
+
+        let currentDataset = 'ph';
+
+        const dashboardChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: 'pH Over Time',
+                        data: chartData.ph,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: 'rgba(75, 192, 192, 1)'
                     }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 50,
+                    easing: 'linear'
+                },
+                responsiveAnimationDuration: 0,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Value'
+                        },
+                        beginAtZero: true
+                    }
+                },
+                elements: {
+                    line: {
+                        tension: 0.2
+                    },
+                    point: {
+                        radius: 3
+                    }
+                }
+            }
+        });
+
+        function updateChart(selectedDataset) {
+            currentDataset = selectedDataset;
+            dashboardChart.data.datasets[0].data = chartData[selectedDataset];
+            dashboardChart.data.datasets[0].label = `${selectedDataset.charAt(0).toUpperCase() + selectedDataset.slice(1)} Over Time`;
+            dashboardChart.update();
+        }
+
+        function getFormattedTime() {
+            const now = new Date();
+            return `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+        }
+
+        const tempData = {
+            ph: [],
+            turbidity: [],
+            tds: [],
+            degradation: []
+        };
+
+        function addChartData(dataset, value) {
+            if (!isSystemRunning) return;
+            tempData[dataset].push(value);
+        }
+
+        function updateChartEvery30Seconds() {
+            if (!isSystemRunning) return;
+
+            const formattedTime = getFormattedTime();
+            chartLabels.push(formattedTime);
+
+            Object.keys(tempData).forEach(dataset => {
+                if (tempData[dataset].length > 0) {
+                    const avgValue = tempData[dataset].reduce((a, b) => a + b, 0) / tempData[dataset].length;
+                    chartData[dataset].push(avgValue);
+                    tempData[dataset] = [];
                 }
             });
 
-            // Function to update chart dataset
-            function updateChart(selectedDataset) {
-                currentDataset = selectedDataset;
-                dashboardChart.data.datasets[0].data = chartData[selectedDataset];
-                dashboardChart.data.datasets[0].label = `${selectedDataset.charAt(0).toUpperCase() + selectedDataset.slice(1)} Over Time`;
-                dashboardChart.update();
+            if (chartLabels.length > 99999999999999999999999999999999999999999999999) {
+                chartLabels.shift();
+                chartData.ph.shift();
+                chartData.turbidity.shift();
+                chartData.tds.shift();
+                chartData.degradation.shift();
             }
 
-            // Helper function to get formatted time (HH:MM:SS)
-            function getFormattedTime() {
-                const now = new Date();
-                return `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
-            }
+            dashboardChart.data.labels = chartLabels;
+            dashboardChart.update();
 
-            // Temporary data storage
-            const tempData = {
-                ph: [],
-                turbidity: [],
-                tds: [],
-                degradation: []
-            };
+            localStorage.setItem('chartData_ph', JSON.stringify(chartData.ph));
+            localStorage.setItem('chartData_turbidity', JSON.stringify(chartData.turbidity));
+            localStorage.setItem('chartData_tds', JSON.stringify(chartData.tds));
+            localStorage.setItem('chartData_degradation', JSON.stringify(chartData.degradation));
+            localStorage.setItem('chartLabels', JSON.stringify(chartLabels));
+        }
 
-            // Function to add chart data immediately
-            function addChartData(dataset, value) {
-                if (!isSystemRunning) return; // Ensure updates only happen if the system is running
-                tempData[dataset].push(value);
-            }
+        function startSystem() {
+            if (!isSystemRunning) {
+                isSystemRunning = true;
+                console.log("System started.");
+                localStorage.setItem('systemStatus', 'running');
 
-            // Function to update chart every 30 seconds starting at the 3rd second
-            function updateChartEvery30Seconds() {
-                if (!isSystemRunning) return; // Only update if the system is running
+                const startTime = new Date().getTime();
+                localStorage.setItem('startTime', startTime);
 
-                const formattedTime = getFormattedTime();
-                chartLabels.push(formattedTime);
+                localStorage.removeItem('elapsedTime');
 
-                Object.keys(tempData).forEach(dataset => {
-                    if (tempData[dataset].length > 0) {
-                        const avgValue = tempData[dataset].reduce((a, b) => a + b, 0) / tempData[dataset].length;
-                        chartData[dataset].push(avgValue);
-                        tempData[dataset] = []; // Clear temporary data
-                    }
-                });
+                durationInterval = setInterval(() => {
+                    const currentTime = new Date().getTime();
+                    const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
+                    DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
+                }, 1000);
 
-                // Keep only the most recent 30 data points
-                if (chartLabels.length > 99999999999999999999999999999999999999999999999) {
-                    chartLabels.shift();
-                    chartData.ph.shift();
-                    chartData.turbidity.shift();
-                    chartData.tds.shift();
-                    chartData.degradation.shift();
-                }
-
-                dashboardChart.data.labels = chartLabels;
-                dashboardChart.update();
-
-                // Save chart data and labels to localStorage
-                localStorage.setItem('chartData_ph', JSON.stringify(chartData.ph));
-                localStorage.setItem('chartData_turbidity', JSON.stringify(chartData.turbidity));
-                localStorage.setItem('chartData_tds', JSON.stringify(chartData.tds));
-                localStorage.setItem('chartData_degradation', JSON.stringify(chartData.degradation));
-                localStorage.setItem('chartLabels', JSON.stringify(chartLabels));
-            }
-
-            // Function to start the system
-            function startSystem() {
-                if (!isSystemRunning) {
-                    isSystemRunning = true;
-                    console.log("System started.");
-                    localStorage.setItem('systemStatus', 'running'); // Save status to localStorage
-
-                    // **DURATION CALCULATION CHANGES START HERE**
-                    const startTime = new Date().getTime(); // Get the current timestamp
-                    localStorage.setItem('startTime', startTime); // Save the start time
-
-                    durationInterval = setInterval(() => {
-                        const currentTime = new Date().getTime();
-                        const durationInSeconds = Math.floor((currentTime - startTime) / 1000); // Calculate duration
-                        DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
-                    }, 1000);
-                    // **DURATION CALCULATION CHANGES END HERE**
-
-
-                    // Start chart update interval after 3 seconds
-                    setTimeout(() => {
-                        chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000); // Update every 30 seconds
-                        updateChartEvery30Seconds(); // Initial update call
-                    }, 1000); // Start after 3 seconds
-
-                    // Reset Co on system start
-                    Co = null;
-                    localStorage.removeItem('initialConcentration');
-
-                    // Clear degradation chart data on system start
-                    chartData.degradation = [];
-                }
-            }
-
-            // Function to stop the system
-            function stopSystem() {
-                if (isSystemRunning) {
-                    isSystemRunning = false;
-                    console.log("System stopped.");
-                    localStorage.setItem('systemStatus', 'stopped'); // Save status to localStorage
-
-                    // Save sensor values and status to localStorage
-                    localStorage.setItem('phValue', phElement.textContent);
-                    localStorage.setItem('turbidityValue', turbidityElement.textContent);
-                    localStorage.setItem('tdsValue', tdsElement.textContent);
-                    localStorage.setItem('degradationValue', degradationElement.textContent);
-                    localStorage.setItem('statusValue', statusElement.textContent);
-                    localStorage.setItem('statusColor', statusElement.style.color);
-
-                    // Clear intervals
-                    clearInterval(durationInterval);
-                    clearInterval(chartUpdateInterval);
-
-                    // Send stop command to IoT devices
-                    socket.emit("publish", {
-                        topic: "iot/control",
-                        message: "0"
-                    });
-                    console.log("System stopped (0 sent to iot/control).");
-                }
-            }
-
-            // Function to reset the system
-            function resetSystem() {
-                isSystemRunning = false;
-                console.log("System reset.");
-                localStorage.setItem('systemStatus', 'reset');
-                localStorage.removeItem('startTime');
-                localStorage.removeItem('chartData_ph');
-                localStorage.removeItem('chartData_turbidity');
-                localStorage.removeItem('chartData_tds');
-                localStorage.removeItem('chartData_degradation');
-                localStorage.removeItem('chartLabels');
-                localStorage.removeItem('initialConcentration');
-                localStorage.removeItem('phValue');
-                localStorage.removeItem('turbidityValue');
-                localStorage.removeItem('tdsValue');
-                localStorage.removeItem('degradationValue');
-                localStorage.removeItem('statusValue');
-                localStorage.removeItem('statusColor');
+                setTimeout(() => {
+                    chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000);
+                    updateChartEvery30Seconds();
+                }, 1000);
 
                 Co = null;
+                localStorage.removeItem('initialConcentration');
+
+                chartData.degradation = [];
+            }
+        }
+
+        function stopSystem() {
+            if (isSystemRunning) {
+                isSystemRunning = false;
+                console.log("System stopped.");
+                localStorage.setItem('systemStatus', 'stopped');
+
+                localStorage.setItem('phValue', phElement.textContent);
+                localStorage.setItem('turbidityValue', turbidityElement.textContent);
+                localStorage.setItem('tdsValue', tdsElement.textContent);
+                localStorage.setItem('degradationValue', degradationElement.textContent);
+                localStorage.setItem('statusValue', statusElement.textContent);
+                localStorage.setItem('statusColor', statusElement.style.color);
+
+                const startTime = parseInt(localStorage.getItem('startTime'), 10);
+                const stopTime = new Date().getTime();
+                const elapsedTime = Math.floor((stopTime - startTime) / 1000);
+                localStorage.setItem('elapsedTime', elapsedTime);
+                console.log("Elapsed time saved:", elapsedTime);
 
                 clearInterval(durationInterval);
                 clearInterval(chartUpdateInterval);
 
-                DurasiElement.textContent = "0 menit 0 detik";
-                phElement.textContent = "Loading...";
-                turbidityElement.textContent = "Loading...";
-                tdsElement.textContent = "Loading...";
-                degradationElement.textContent = "Loading...";
-                statusElement.textContent = "Loading...";
-                statusElement.style.color = "black";
-
-                chartLabels.length = 0;
-                chartData.ph.length = 0;
-                chartData.turbidity.length = 0;
-                chartData.tds.length = 0;
-                chartData.degradation.length = 0;
-                dashboardChart.update();
-
-                 console.log("Controlling elements reset to default.");
-
-            }
-
-            // Add event listener to the reset button
-            document.getElementById('resetButton').addEventListener('click', function (event) {
-                event.preventDefault();
-
-                   //**PINDAHKAN BAGIAN INI KESINI (sebelum resetSystem()):**
-                document.querySelectorAll('.light-toggle').forEach(button => {
-                    const topic = button.getAttribute('data-topic');
-                    socket.emit("publish", {
-                        topic: topic,
-                        message: '0'  //Matikan semua lampu
-                    });
-                    console.log(`Merest lampu: ${topic} = 0`);
-                });
-
-                resetSystem();
-            });
-
-            // Variables for managing system state
-            let savedConfig = {}; // Stores the last saved configuration
-
-            // Control buttons and elements
-            const controls = document.querySelectorAll("[data-topic]");
-            const saveButton = document.getElementById("saveButton");
-            const resetButton = document.getElementById("resetButton");
-            const startButton = document.getElementById("startButton");
-            const stopButton = document.getElementById("stopButton");
-
-             // Light toggle functionality
-            document.querySelectorAll('.light-toggle').forEach(button => {
-                button.addEventListener('click', () => {
-                    const topic = button.getAttribute('data-topic');
-                    let state = button.getAttribute('data-state');
-                    state = state === '0' ? '1' : '0'; // Toggle state
-                    button.setAttribute('data-state', state);
-                    button.textContent = state === '1' ? 'ON' : 'OFF';
-
-                    // Change background color based on state
-                    if (state === '1') {
-                        button.style.backgroundColor = '#3e8e41'; // Darker green
-                    } else {
-                        button.style.backgroundColor = '#4CAF50'; // Original green
-                    }
-
-                     console.log(`Perubahan state lampu disimpan lokal: ${topic} menjadi ${state}`);
-                });
-            });
-
-
-            saveButton.addEventListener("click", () => {
-                savedConfig = {}; // Reset saved configuration
-                controls.forEach(control => {
-                    const topic = control.getAttribute("data-topic");
-                    const value = control.value;
-                    savedConfig[topic] = value;
-                });
-
-                //**TAMBAHKAN INI:**
-                document.querySelectorAll('.light-toggle').forEach(button => {
-                    const topic = button.getAttribute('data-topic');
-                    const state = button.getAttribute('data-state');
-                    savedConfig[topic] = state;  //Simpan state lampu
-                });
-
-                console.log("Configuration saved:", savedConfig);
-            });
-
-            startButton.addEventListener("click", () => {
-                if (Object.keys(savedConfig).length === 0) {
-                    console.warn("No configuration saved. Please save the configuration first.");
-                    return;
-                }
-
-                for (const [topic, message] of Object.entries(savedConfig)) {
-                    socket.emit("publish", {
-                        topic,
-                        message
-                    });
-                    console.log(`Published saved config to ${topic}: ${message}`);
-                }
-
                 socket.emit("publish", {
                     topic: "iot/control",
-                    message: "1"
-                });
-                socket.emit("publish", {
-                    topic: "iot/reset",
                     message: "0"
                 });
-                console.log("System started (1 sent to iot/control).");
+                console.log("System stopped (0 sent to iot/control).");
+            }
+        }
 
-                startSystem();
-            });
+        function resetSystem() {
+            isSystemRunning = false;
+            console.log("System reset.");
+            localStorage.setItem('systemStatus', 'reset');
+            localStorage.removeItem('startTime');
+            localStorage.removeItem('chartData_ph');
+            localStorage.removeItem('chartData_turbidity');
+            localStorage.removeItem('chartData_tds');
+            localStorage.removeItem('chartData_degradation');
+            localStorage.removeItem('chartLabels');
+            localStorage.removeItem('initialConcentration');
+            localStorage.removeItem('phValue');
+            localStorage.removeItem('turbidityValue');
+            localStorage.removeItem('tdsValue');
+            localStorage.removeItem('degradationValue');
+            localStorage.removeItem('statusValue');
+            localStorage.removeItem('statusColor');
+            localStorage.removeItem('elapsedTime');
 
-            stopButton.addEventListener("click", () => {
-                stopSystem();
-                //**TAMBAHKAN INI:**
-                document.querySelectorAll('.light-toggle').forEach(button => {
-                    const topic = button.getAttribute('data-topic');
-                    socket.emit("publish", {
-                        topic: topic,
-                        message: '0'  //Matikan semua lampu
-                    });
-                    console.log(`Mematikan lampu: ${topic} = 0`);
+            Co = null;
+
+            clearInterval(durationInterval);
+            clearInterval(chartUpdateInterval);
+
+            DurasiElement.textContent = "0 menit 0 detik";
+            phElement.textContent = "Loading...";
+            turbidityElement.textContent = "Loading...";
+            tdsElement.textContent = "Loading...";
+            degradationElement.textContent = "Loading...";
+            statusElement.textContent = "Loading...";
+            statusElement.style.color = "black";
+
+            chartLabels.length = 0;
+            chartData.ph.length = 0;
+            chartData.turbidity.length = 0;
+            chartData.tds.length = 0;
+            chartData.degradation.length = 0;
+            dashboardChart.update();
+
+            console.log("Controlling elements reset to default.");
+
+        }
+
+        document.getElementById('resetButton').addEventListener('click', function (event) {
+            event.preventDefault();
+
+            document.querySelectorAll('.light-toggle').forEach(button => {
+                const topic = button.getAttribute('data-topic');
+                socket.emit("publish", {
+                    topic: topic,
+                    message: '0'
                 });
+                console.log(`Merest lampu: ${topic} = 0`);
+            });
+            socket.emit("publish", {
+                topic: "iot/reset",
+                message: "1"
             });
 
+        });
 
-            // Load system status from localStorage when the page loads
-            window.addEventListener('load', () => {
-                const savedStatus = localStorage.getItem('systemStatus');
-                const savedStartTime = localStorage.getItem('startTime');
-                const savedCo = localStorage.getItem('initialConcentration');
+        let savedConfig = {};
 
-                if (savedCo) {
-                    Co = parseFloat(savedCo);
+        const controls = document.querySelectorAll("[data-topic]");
+        const saveButton = document.getElementById("saveButton");
+        const resetButton = document.getElementById("resetButton");
+        const startButton = document.getElementById("startButton");
+        const stopButton = document.getElementById("stopButton");
+
+        document.querySelectorAll('.light-toggle').forEach(button => {
+            button.addEventListener('click', () => {
+                const topic = button.getAttribute('data-topic');
+                let state = button.getAttribute('data-state');
+                state = state === '0' ? '1' : '0';
+                button.setAttribute('data-state', state);
+                button.textContent = state === '1' ? 'ON' : 'OFF';
+
+                if (state === '1') {
+                    button.style.backgroundColor = '#3e8e41';
+                } else {
+                    button.style.backgroundColor = '#4CAF50';
                 }
 
-                if (savedStatus === 'running') {
-                    if (savedStartTime) {
-                        // Calculate the duration from the saved start time
-                        const startTime = parseInt(savedStartTime, 10);
-                        const currentTime = new Date().getTime();
-                        const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
+                console.log(`Perubahan state lampu disimpan lokal: ${topic} menjadi ${state}`);
+            });
+        });
 
-                        // Update the duration display
-                        DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
 
-                        // Restart the duration interval
-                        durationInterval = setInterval(() => {
-                            const currentTime = new Date().getTime();
-                            const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
-                            DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
-                        }, 1000);
-
-                        isSystemRunning = true; // Restore system running state
-                        // Optionally restart the chart update interval here as well, if needed
-                        setTimeout(() => {
-                            chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000); // Update every 30 seconds
-                            updateChartEvery30Seconds(); // Initial update call
-                        }, 3000);
-                    } else {
-                        // If there's no saved start time, but the system was running, reset it
-                        // **JANGAN** jalankan resetSystem disini
-                        console.log("Tidak ada saved start time, tapi system running. Jangan reset sistem.");
-                    }
-                } else if (savedStatus === 'stopped') {
-                    isSystemRunning = false;
-
-                    // Load saved sensor values and status
-                    phElement.textContent = localStorage.getItem('phValue') || "Loading...";
-                    turbidityElement.textContent = localStorage.getItem('turbidityValue') || "Loading...";
-                    tdsElement.textContent = localStorage.getItem('tdsValue') || "Loading...";
-                    degradationElement.textContent = localStorage.getItem('degradationValue') || "Loading...";
-                    statusElement.textContent = localStorage.getItem('statusValue') || "Loading...";
-                    statusElement.style.color = localStorage.getItem('statusColor') || "black";
-
-                    // If there's a saved start time, calculate and display the duration
-                    if (savedStartTime) {
-                        const startTime = parseInt(savedStartTime, 10);
-                        const currentTime = new Date().getTime();
-                        const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
-                        DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
-                    }
-                } else if (savedStatus === 'reset') {
-                    // **JANGAN** jalankan resetSystem disini
-                    console.log("Status adalah reset, tapi jangan reset sistem saat load.");
-                }
+        saveButton.addEventListener("click", () => {
+            savedConfig = {};
+            controls.forEach(control => {
+                const topic = control.getAttribute("data-topic");
+                const value = control.value;
+                savedConfig[topic] = value;
             });
 
-            let Co = parseFloat(localStorage.getItem('initialConcentration')) || null; // Load initial concentration from localStorage
+            document.querySelectorAll('.light-toggle').forEach(button => {
+                const topic = button.getAttribute('data-topic');
+                const state = button.getAttribute('data-state');
+                savedConfig[topic] = state;
+            });
 
-            // Listen to MQTT messages from the server
-            socket.on('mqttMessage', (data) => {
-                console.log("mqttMessage handler running");
+            console.log("Configuration saved:", savedConfig);
+        });
 
-                const {
+        startButton.addEventListener("click", () => {
+            if (Object.keys(savedConfig).length === 0) {
+                console.warn("No configuration saved. Please save the configuration first.");
+                return;
+            }
+
+            for (const [topic, message] of Object.entries(savedConfig)) {
+                socket.emit("publish", {
                     topic,
                     message
-                } = data;
-                console.log("Received MQTT message - Topic:", topic, "Message:", message);
+                });
+                console.log(`Published saved config to ${topic}: ${message}`);
+            }
 
-                if (topic === 'iot/control') {
-                    if (message === '1') {
-                        if (!isSystemRunning) {
-                            startSystem();
-                        }
-                    } else if (message === '0') {
-                        if (isSystemRunning) {
-                            stopSystem();
-                        }
-                    } else if (message === '2') { // Added reset command
-                        resetSystem();
-                    }
-                    return;
-                }
-
-                if (topic === 'iot/reset') {
-                    console.log("Topic is iot/reset");
-                    console.log("Message from iot/reset:", message);
-
-                    if (message === '1') {
-                        console.log("Received reset signal from iot/reset: 1.  Updating UI.");
-                        // Update UI elements here...
-                        DurasiElement.textContent = "0 menit 0 detik";
-                        phElement.textContent = "Loading...";
-                        turbidityElement.textContent = "Loading...";
-                        tdsElement.textContent = "Loading...";
-                        degradationElement.textContent = "Loading...";
-                        statusElement.textContent = "Loading...";
-                        statusElement.style.color = "black";
-
-                        // Reset chart data
-                        chartLabels.length = 0;
-                        chartData.ph.length = 0;
-                        chartData.turbidity.length = 0;
-                        chartData.tds.length = 0;
-                        chartData.degradation.length = 0;
-                        dashboardChart.update();
-                    } else if (message === '0') {
-                        //dont do anything
-                        console.log("reset trigger is 0, so dont reset the system")
-                    }
-                    return;
-                }
-
-                if (!isSystemRunning) return;
-
-                const value = parseFloat(message);
-
-                if (topic === 'iot/ph') {
-                    phElement.textContent = value;
-                    addChartData('ph', value);
-                } else if (topic === 'iot/turbidity') {
-                    turbidityElement.textContent = `${value} NTU`;
-                    addChartData('turbidity', value);
-                } else if (topic === 'iot/tds') {
-                    tdsElement.textContent = `${value} ppm`;
-                    addChartData('tds', value);
-
-                    if (Co === null && value !== 0) {
-                        Co = value;
-                        localStorage.setItem('initialConcentration', Co);
-                    }
-
-                    if (Co !== null) {
-                        const degradation = ((Co - value) / Co) * 100;
-                        degradationElement.textContent = `${degradation.toFixed(2)}%`;
-                        addChartData('degradation', degradation);
-                    } else {
-                        degradationElement.textContent = "N/A";
-                    }
-                }
-
-                const ph = parseFloat(phElement.textContent) || 0;
-                const turbidity = parseFloat(turbidityElement.textContent) || 0;
-                const tds = parseFloat(tdsElement.textContent) || 0;
-
-                if (ph >= 6.5 && ph <= 8.5 && turbidity < 100 && tds < 100) {
-                    statusElement.textContent = 'Aman';
-                    statusElement.style.color = 'green';
-                } else {
-                    statusElement.textContent = 'Tidak Aman';
-                    statusElement.style.color = 'red';
-                }
+            socket.emit("publish", {
+                topic: "iot/control",
+                message: "1"
             });
+            socket.emit("publish", {
+                topic: "iot/reset",
+                message: "0"
+            });
+            console.log("System started (1 sent to iot/control).");
 
-            // Function to send data to the server to save it in the background
-            function sendDataToServer(data) {
-                fetch('/save-data', { // Adjust the URL to your server endpoint
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        console.log('Data sent to server successfully');
-                    })
-                    .catch(error => {
-                        console.error('Error sending data to server:', error);
-                    });
+            startSystem();
+        });
+
+        stopButton.addEventListener("click", () => {
+            stopSystem();
+            document.querySelectorAll('.light-toggle').forEach(button => {
+                const topic = button.getAttribute('data-topic');
+                socket.emit("publish", {
+                    topic: topic,
+                    message: '0'
+                });
+                console.log(`Mematikan lampu: ${topic} = 0`);
+            });
+        });
+
+        window.addEventListener('load', () => {
+            const savedStatus = localStorage.getItem('systemStatus');
+            const savedStartTime = localStorage.getItem('startTime');
+            const savedCo = localStorage.getItem('initialConcentration');
+            const savedElapsedTime = localStorage.getItem('elapsedTime');
+
+            if (savedCo) {
+                Co = parseFloat(savedCo);
             }
 
-            // Modify the collectData function to also send data to the server
-            function collectData(time, turbidity, ph, tds, degradation) {
-                temporaryData.push({
-                    time,
-                    turbidity,
-                    ph,
-                    tds,
-                    degradation
-                });
-                localStorage.setItem('temporaryData', JSON.stringify(temporaryData)); // Save data to localStorage
+            if (savedStatus === 'running') {
+                if (savedStartTime) {
+                    const startTime = parseInt(savedStartTime, 10);
+                    const currentTime = new Date().getTime();
+                    const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
 
-                // Send the data to the server
-                sendDataToServer({
-                    time,
-                    turbidity,
-                    ph,
-                    tds,
-                    degradation
-                });
-            }
-
-            // Example: Send chart data to the server periodically (e.g., every minute)
-            setInterval(() => {
-                // Combine chart data and labels into one object
-                const serverData = {
-                    chartLabels: chartLabels,
-                    chartData: chartData
-                };
-
-                sendDataToServer(serverData);
-            }, 60000); // Send data every 60 seconds (1 minute)
-
-            // Example: Send system status updates to the server
-            function sendSystemStatus(status) {
-                sendDataToServer({
-                    systemStatus: status
-                });
-            }
-
-            // Modify the startSystem and stopSystem functions to send system status updates
-            function startSystem() {
-                if (!isSystemRunning) {
-                    isSystemRunning = true;
-                    console.log("System started.");
-                    localStorage.setItem('systemStatus', 'running'); // Save status to localStorage
-
-                    sendSystemStatus('running'); // Send system status update to the server
-
-                    const startTime = new Date().getTime(); // Get the current timestamp
-                    localStorage.setItem('startTime', startTime); // Save the start time
+                    DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
 
                     durationInterval = setInterval(() => {
                         const currentTime = new Date().getTime();
-                        const durationInSeconds = Math.floor((currentTime - startTime) / 1000); // Calculate duration
+                        const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
                         DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
                     }, 1000);
 
+                    isSystemRunning = true;
                     setTimeout(() => {
-                        chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000); // Update every 30 seconds
-                        updateChartEvery30Seconds(); // Initial update call
-                    }, 1000); // Start after 3 seconds
+                        chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000);
+                        updateChartEvery30Seconds();
+                    }, 1000);
+                } else {
+                    console.log("Tidak ada saved start time, tapi system running. Jangan reset sistem.");
+                }
+            } else if (savedStatus === 'stopped') {
+                isSystemRunning = false;
+
+                phElement.textContent = localStorage.getItem('phValue') || "Loading...";
+                turbidityElement.textContent = localStorage.getItem('turbidityValue') || "Loading...";
+                tdsElement.textContent = localStorage.getItem('tdsValue') || "Loading...";
+                degradationElement.textContent = localStorage.getItem('degradationValue') || "Loading...";
+                statusElement.textContent = localStorage.getItem('statusValue') || "Loading...";
+                statusElement.style.color = localStorage.getItem('statusColor') || "black";
+
+                if (savedElapsedTime) {
+                    const elapsedTime = parseInt(savedElapsedTime, 10);
+                    DurasiElement.textContent = `${Math.floor(elapsedTime / 60)} menit ${elapsedTime % 60} detik`;
+                }
+            } else if (savedStatus === 'reset') {
+                console.log("Status adalah reset, tapi jangan reset sistem saat load.");
+            }
+        });
+
+        let Co = parseFloat(localStorage.getItem('initialConcentration')) || null;
+
+        socket.on('mqttMessage', (data) => {
+            console.log("mqttMessage handler running");
+
+            const {
+                topic,
+                message
+            } = data;
+            console.log("Received MQTT message - Topic:", topic, "Message:", message);
+
+            if (topic === 'iot/control') {
+                if (message === '1') {
+                    if (!isSystemRunning) {
+                        startSystem();
+                    }
+                } else if (message === '0') {
+                    if (isSystemRunning) {
+                        stopSystem();
+                    }
+                } else if (message === '2') {
+                    resetSystem();
+                }
+                return;
+            }
+
+            if (topic === 'iot/reset') {
+                console.log("Topic is iot/reset");
+                console.log("Message from iot/reset:", message);
+
+                if (message === '1') {
+                    console.log("Received reset signal from iot/reset: 1.  Updating UI.");
+                    resetSystem();
+                    DurasiElement.textContent = "0 menit 0 detik";
+                    phElement.textContent = "Loading...";
+                    turbidityElement.textContent = "Loading...";
+                    tdsElement.textContent = "Loading...";
+                    degradationElement.textContent = "Loading...";
+                    statusElement.textContent = "Loading...";
+                    statusElement.style.color = "black";
+
+                    chartLabels.length = 0;
+                    chartData.ph.length = 0;
+                    chartData.turbidity.length = 0;
+                    chartData.tds.length = 0;
+                    chartData.degradation.length = 0;
+                    dashboardChart.update();
+                } else if (message === '0') {
+                    console.log("reset trigger is 0, so dont reset the system")
+                }
+                return;
+            }
+
+            if (!isSystemRunning) return;
+
+            const value = parseFloat(message);
+
+            let phValue = null;
+            let turbidityValue = null;
+            let tdsValue = null;
+
+
+            if (topic === 'iot/ph') {
+                phValue = parseFloat(message);
+                phElement.textContent = phValue.toFixed(2);
+                addChartData('ph', phValue);
+            } else if (topic === 'iot/turbidity') {
+                turbidityValue = parseFloat(message);
+                turbidityElement.textContent = `${turbidityValue.toFixed(2)} NTU`;
+                addChartData('turbidity', turbidityValue);
+            } else if (topic === 'iot/tds') {
+                tdsValue = parseFloat(message);
+                tdsElement.textContent = `${tdsValue.toFixed(2)} ppm`;
+                addChartData('tds', tdsValue);
+
+                if (Co === null && tdsValue !== 0) {
+                    Co = tdsValue;
+                    localStorage.setItem('initialConcentration', Co);
+                }
+
+                if (Co !== null) {
+                    const degradation = ((Co - tdsValue) / Co) * 100;
+                    degradationElement.textContent = `${degradation.toFixed(2)}%`;
+                    addChartData('degradation', degradation);
+                } else {
+                    degradationElement.textContent = "N/A";
                 }
             }
 
-            function stopSystem() {
-                if (isSystemRunning) {
-                    isSystemRunning = false;
-                    console.log("System stopped.");
-                    localStorage.setItem('systemStatus', 'stopped'); // Save status to localStorage
+            parseFloat(turbidityElement.textContent) || 0;
+            const tds = parseFloat(tdsElement.textContent) || 0;
 
-                    sendSystemStatus('stopped'); // Send system status update to the server
-
-                    localStorage.setItem('phValue', phElement.textContent);
-                    localStorage.setItem('turbidityValue', turbidityElement.textContent);
-                    localStorage.setItem('tdsValue', tdsElement.textContent);
-                    localStorage.setItem('degradationValue', degradationElement.textContent);
-                    localStorage.setItem('statusValue', statusElement.textContent);
-                    localStorage.setItem('statusColor', statusElement.style.color);
-
-                    clearInterval(durationInterval);
-                    clearInterval(chartUpdateInterval);
-
-                    socket.emit("publish", {
-                        topic: "iot/control",
-                        message: "0"
-                    });
-                    console.log("System stopped (0 sent to iot/control).");
-                }
+            if (ph >= 6.5 && ph <= 8.5 && turbidity < 100 && tds < 100) {
+                statusElement.textContent = 'Aman';
+                statusElement.style.color = 'green';
+            } else {
+                statusElement.textContent = 'Tidak Aman';
+                statusElement.style.color = 'red';
             }
-        </script>
+        });
 
-    <!-- Monitoring Section -->
+        function sendDataToServer(data) {
+            fetch('/save-data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    console.log('Data sent to server successfully');
+                })
+                .catch(error => {
+                    console.error('Error sending data to server:', error);
+                });
+        }
+
+        function getFloatValue(element) {
+            const value = parseFloat(element.textContent);
+            return isNaN(value) ? null : value;
+        }
+
+        function collectData(time, turbidity, ph, tds, degradation) {
+            const turbidityValue = typeof turbidity === 'number' ? turbidity : getFloatValue(turbidityElement);
+            const phValue = typeof ph === 'number' ? ph : getFloatValue(phElement);
+            const tdsValue = typeof tds === 'number' ? tds : getFloatValue(tdsElement);
+            const degradationValue = typeof degradation === 'number' ? degradation : getFloatValue(degradationElement);
+
+            if (turbidityValue === null || phValue === null || tdsValue === null || degradationValue === null) {
+                console.warn("Skipping collectData due to null values. Ensure all sensor data is valid.");
+                return;
+            }
+
+            const data = {
+                time: time,
+                turbidity: turbidityValue,
+                ph: phValue,
+                tds: tdsValue,
+                degradation: degradationValue
+            };
+
+            temporaryData.push(data);
+            localStorage.setItem('temporaryData', JSON.stringify(temporaryData));
+
+            sendDataToServer(data);
+        }
+
+        setInterval(() => {
+            const serverData = {
+                chartLabels: chartLabels,
+                chartData: chartData
+            };
+
+            if (chartData.ph.length > 0 || chartData.turbidity.length > 0 || chartData.tds.length > 0 || chartData.degradation.length > 0) {
+                sendDataToServer(serverData);
+            } else {
+                console.warn("Tidak ada data chart yang tersedia.  Tidak mengirim ke server.");
+            }
+
+        }, 60000);
+
+        function sendSystemStatus(status) {
+            sendDataToServer({
+                systemStatus: status
+            });
+        }
+
+        function startSystem() {
+            if (!isSystemRunning) {
+                isSystemRunning = true;
+                console.log("System started.");
+                localStorage.setItem('systemStatus', 'running');
+
+                sendSystemStatus('running');
+
+                const startTime = new Date().getTime();
+                localStorage.setItem('startTime', startTime);
+
+                localStorage.removeItem('elapsedTime');
+
+                durationInterval = setInterval(() => {
+                    const currentTime = new Date().getTime();
+                    const durationInSeconds = Math.floor((currentTime - startTime) / 1000);
+                    DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
+                }, 1000);
+
+                setTimeout(() => {
+                    chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000);
+                    updateChartEvery30Seconds();
+                }, 1000);
+            }
+        }
+
+        function stopSystem() {
+            if (isSystemRunning) {
+                isSystemRunning = false;
+                console.log("System stopped.");
+                localStorage.setItem('systemStatus', 'stopped');
+
+                sendSystemStatus('stopped');
+
+                localStorage.setItem('phValue', phElement.textContent);
+                localStorage.setItem('turbidityValue', turbidityElement.textContent);
+                localStorage.setItem('tdsValue', tdsElement.textContent);
+                localStorage.setItem('degradationValue', degradationElement.textContent);
+                localStorage.setItem('statusValue', statusElement.textContent);
+                localStorage.setItem('statusColor', statusElement.style.color);
+
+                const startTime = parseInt(localStorage.getItem('startTime'), 10);
+                const stopTime = new Date().getTime();
+                const elapsedTime = Math.floor((stopTime - startTime) / 1000);
+                localStorage.setItem('elapsedTime', elapsedTime);
+                console.log("Elapsed time saved:", elapsedTime);
+
+                clearInterval(durationInterval);
+                clearInterval(chartUpdateInterval);
+
+                socket.emit("publish", {
+                    topic: "iot/control",
+                    message: "0"
+                });
+                console.log("System stopped (0 sent to iot/control).");
+            }
+        }
+    </script>
+
     <div id="monitoring" class="content">
         <h1>Monitoring</h1>
         <div class="chart-grid">
@@ -755,9 +998,8 @@
             </div>
         </div>
 
-        <script> // script Monitoring chart
-            const charts = [
-            {
+        <script>
+            const charts = [{
                 id: 'phChart',
                 label: 'pH Over Time',
                 dataset: 'ph',
@@ -781,18 +1023,17 @@
                 dataset: 'degradation',
                 color: 'rgba(255, 99, 132, 1)'
             }
-        ];
+            ];
 
-        const monitoringCharts = {};
+            const monitoringCharts = {};
 
-        charts.forEach(chart => {
-            const ctx = document.getElementById(chart.id).getContext('2d');
-            monitoringCharts[chart.dataset] = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: chartLabels,
-                    datasets: [
-                        {
+            charts.forEach(chart => {
+                const ctx = document.getElementById(chart.id).getContext('2d');
+                monitoringCharts[chart.dataset] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
                             label: chart.label,
                             data: chartData[chart.dataset],
                             backgroundColor: chart.color.replace('1)', '0.2)'),
@@ -800,64 +1041,53 @@
                             borderWidth: 2,
                             tension: 0.4,
                             pointRadius: 4,
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: {
-                        duration: 50,  // Fast animation for quicker updates
-                        easing: 'linear'
+                        }]
                     },
-                    responsiveAnimationDuration: 0,
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Time'
-                            }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            duration: 50,
+                            easing: 'linear'
                         },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Value'
+                        responsiveAnimationDuration: 0,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time'
+                                }
                             },
-                            beginAtZero: true
-                        }
-                    },
-                    elements: {
-                        line: {
-                            tension: 0.2  // Make line less curvy for better performance
                         },
-                        point: {
-                            radius: 3  // Reduce point size to make rendering faster
+                        elements: {
+                            line: {
+                                tension: 0.2
+                            },
+                            point: {
+                                radius: 3
+                            }
                         }
                     }
-                }
+                });
             });
-        });
 
-        // Fungsi untuk memperbarui data chart
-        function updateMonitoringCharts() {
-            charts.forEach(chart => {
-                const dataset = chart.dataset;
-                const chartInstance = monitoringCharts[dataset];
+            function updateMonitoringCharts() {
+                charts.forEach(chart => {
+                    const dataset = chart.dataset;
+                    const chartInstance = monitoringCharts[dataset];
 
-                // Perbarui data dan label
-                chartInstance.data.labels = chartLabels; // Gunakan label waktu dari script utama
-                chartInstance.data.datasets[0].data = chartData[dataset]; // Gunakan data dari script utama
+                    chartInstance.data.labels = chartLabels;
+                    chartInstance.data.datasets[0].data = chartData[dataset];
 
-                // Perbarui chart
-                chartInstance.update();
-            });
-        }
+                    chartInstance.update();
+                });
+            }
 
-        // Mulai pembaruan chart setiap 30 detik, dimulai dari detik ke-3
-        setTimeout(() => {
-            updateMonitoringCharts(); // Panggil fungsi pertama kali setelah 3 detik
-            setInterval(updateMonitoringCharts, 30000); // Set interval pembaruan setiap 30 detik
-        }, 1000); // Mulai setelah 3 detik
+
+            setTimeout(() => {
+                updateMonitoringCharts();
+                setInterval(updateMonitoringCharts, 30000);
+            }, 1000);
         </script>
     </div>
 
@@ -874,7 +1104,6 @@
                 </tr>
             </thead>
             <tbody id="data-table-body">
-                <!-- Data rows will be added dynamically here -->
             </tbody>
         </table>
         <div class="download-buttons">
@@ -886,18 +1115,21 @@
 
         <script>
             const dataTableBody = document.getElementById('data-table-body');
-            let temporaryData = JSON.parse(localStorage.getItem('temporaryData')) || []; // Load data from localStorage
+            let temporaryData = JSON.parse(localStorage.getItem('temporaryData')) || [];
 
-            // Initially hide the table
             dataTableBody.style.display = 'none';
 
-            // Function to collect data into the array
             function collectData(time, turbidity, ph, tds, degradation) {
-                temporaryData.push({ time, turbidity, ph, tds, degradation });
-                localStorage.setItem('temporaryData', JSON.stringify(temporaryData)); // Save data to localStorage
+                temporaryData.push({
+                    time,
+                    turbidity,
+                    ph,
+                    tds,
+                    degradation
+                });
+                localStorage.setItem('temporaryData', JSON.stringify(temporaryData));
             }
 
-            // Function to update the table with the collected data
             function updateTable(data = temporaryData) {
                 dataTableBody.innerHTML = '';
                 data.forEach(data => {
@@ -912,25 +1144,24 @@
                     dataTableBody.appendChild(row);
                 });
 
-                // Show the table
-                dataTableBody.style.display = 'table'; // Or 'block' depending on your table's CSS
+                dataTableBody.style.display = 'table';
             }
 
-            // Function to reset the table and temporary data
             function resetTable() {
                 dataTableBody.innerHTML = '';
                 temporaryData = [];
-                localStorage.removeItem('temporaryData'); // Remove data from localStorage
+                localStorage.removeItem('temporaryData');
 
-                // Hide the table after reset
                 dataTableBody.style.display = 'none';
             }
 
-            // MQTT message handler
             socket.on('mqttMessage', (data) => {
                 if (!isSystemRunning) return;
 
-                const { topic, message } = data;
+                const {
+                    topic,
+                    message
+                } = data;
                 const currentTime = new Date().toLocaleTimeString();
 
                 switch (topic) {
@@ -953,31 +1184,29 @@
                 collectData(currentTime, turbidity, ph, tds, degradation.toFixed(2));
             });
 
-            // Function to generate and view TXT content
             document.getElementById('view-txt').addEventListener('click', () => {
                 updateTable();
             });
 
-            // Function to generate and view Excel content
             document.getElementById('view-excel').addEventListener('click', () => {
                 updateTable();
             });
 
-            // Function to download data as TXT
             document.getElementById('download-txt').addEventListener('click', () => {
                 let txtContent = 'Time\tTurbidity (NTU)\tpH\tTDS (ppm)\tDegradation (%)\n';
                 temporaryData.forEach(data => {
                     txtContent += `${data.time}\t${data.turbidity}\t${data.ph}\t${data.tds}\t${data.degradation}\n`;
                 });
 
-                const blob = new Blob([txtContent], { type: 'text/plain' });
+                const blob = new Blob([txtContent], {
+                    type: 'text/plain'
+                });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
                 link.download = 'sensor_data.txt';
                 link.click();
             });
 
-            // Function to download data as Excel
             document.getElementById('download-excel').addEventListener('click', () => {
                 let excelContent = '<table><tr><th>Time</th><th>Turbidity (NTU)</th><th>pH</th><th>TDS (ppm)</th><th>Degradation (%)</th></tr>';
                 temporaryData.forEach(data => {
@@ -985,144 +1214,41 @@
                 });
                 excelContent += '</table>';
 
-                const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' });
+                const blob = new Blob([excelContent], {
+                    type: 'application/vnd.ms-excel'
+                });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
                 link.download = 'sensor_data.xls';
                 link.click();
             });
 
-            // Reset table when reset button is clicked
             document.getElementById('resetButton').addEventListener('click', () => {
-                resetTable(); // Reset table and clear localStorage data
+                resetTable();
             });
-
-            // Optionally, update the table on page load with any existing data:
-            // updateTable();
         </script>
     </div>
 
-
-    <!-- Info Section -->
     <div id="info" class="content">
         <h1>Info</h1>
-        <p>PomClear: Photocatalytic Degradation of Palm Oil Mill Secondary Effluent (POMSE) using TiO2 Nanoparticles with Real-Time Monitoring</p>
+        <p>PomClear: Photocatalytic Degradation of Palm Oil Mill Secondary Effluent (POMSE) using TiO2 Nanoparticles
+            with Real-Time Monitoring</p>
     </div>
 
     <script>
         const links = document.querySelectorAll('.sidebar-links a');
         const contents = document.querySelectorAll('.content');
 
-        // Event listener for sidebar links
         links.forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const targetId = link.getAttribute('data-target');
 
-                // Remove active class from all contents
                 contents.forEach(content => content.classList.remove('active'));
 
-                // Add active class to the target content
                 document.getElementById(targetId).classList.add('active');
             });
         });
-    </script>
-
-
-    <!-- ========================= Background Server JavaScript ========================= -->
-    <script>
-        // Function to send data to the server to save it in the background
-        function sendDataToServer(data) {
-            fetch('/save-data', {  // Adjust the URL to your server endpoint
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                console.log('Data sent to server successfully');
-            })
-            .catch(error => {
-                console.error('Error sending data to server:', error);
-            });
-        }
-
-        // Modify the collectData function to also send data to the server
-        function collectData(time, turbidity, ph, tds, degradation) {
-            temporaryData.push({ time, turbidity, ph, tds, degradation });
-            localStorage.setItem('temporaryData', JSON.stringify(temporaryData)); // Save data to localStorage
-
-            // Send the data to the server
-            sendDataToServer({ time, turbidity, ph, tds, degradation });
-        }
-
-        // Example: Send chart data to the server periodically (e.g., every minute)
-        setInterval(() => {
-            // Combine chart data and labels into one object
-            const serverData = {
-                chartLabels: chartLabels,
-                chartData: chartData
-            };
-
-            sendDataToServer(serverData);
-        }, 60000); // Send data every 60 seconds (1 minute)
-
-        // Example: Send system status updates to the server
-        function sendSystemStatus(status) {
-            sendDataToServer({ systemStatus: status });
-        }
-
-        // Modify the startSystem and stopSystem functions to send system status updates
-        function startSystem() {
-            if (!isSystemRunning) {
-                isSystemRunning = true;
-                console.log("System started.");
-                localStorage.setItem('systemStatus', 'running'); // Save status to localStorage
-
-                sendSystemStatus('running'); // Send system status update to the server
-
-                const startTime = new Date().getTime(); // Get the current timestamp
-                localStorage.setItem('startTime', startTime); // Save the start time
-
-                durationInterval = setInterval(() => {
-                    const currentTime = new Date().getTime();
-                    const durationInSeconds = Math.floor((currentTime - startTime) / 1000); // Calculate duration
-                    DurasiElement.textContent = `${Math.floor(durationInSeconds / 60)} menit ${durationInSeconds % 60} detik`;
-                }, 1000);
-
-                setTimeout(() => {
-                    chartUpdateInterval = setInterval(updateChartEvery30Seconds, 30000); // Update every 30 seconds
-                    updateChartEvery30Seconds(); // Initial update call
-                }, 1000); // Start after 3 seconds
-            }
-        }
-
-        function stopSystem() {
-            if (isSystemRunning) {
-                isSystemRunning = false;
-                console.log("System stopped.");
-                localStorage.setItem('systemStatus', 'stopped'); // Save status to localStorage
-
-                sendSystemStatus('stopped'); // Send system status update to the server
-
-                localStorage.setItem('phValue', phElement.textContent);
-                localStorage.setItem('turbidityValue', turbidityElement.textContent);
-                localStorage.setItem('tdsValue', tdsElement.textContent);
-                localStorage.setItem('degradationValue', degradationElement.textContent);
-                localStorage.setItem('statusValue', statusElement.textContent);
-                localStorage.setItem('statusColor', statusElement.style.color);
-
-                clearInterval(durationInterval);
-                clearInterval(chartUpdateInterval);
-
-                socket.emit("publish", { topic: "iot/control", message: "0" });
-                console.log("System stopped (0 sent to iot/control).");
-            }
-        }
     </script>
 
 </body>

@@ -17,6 +17,66 @@ body {
     overflow-x: hidden;
 }
 
+/* Auth Container & Forms */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f0f0f0;
+}
+
+.auth-form {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 300px;
+}
+
+.auth-form h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.auth-form label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.auth-form input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.auth-form button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.auth-form button:hover {
+    background-color: #3e8e41;
+}
+
+.auth-form .error {
+    color: red;
+    margin-top: 5px;
+}
+
+.auth-form .forgot-password {
+    text-align: center;
+    margin-top: 10px;
+}
+
 /* Sidebar */
 .sidebar {
     position: fixed;
@@ -88,6 +148,22 @@ body {
     color: #fff;
 }
 
+.sidebar-links li a {
+    display: flex;
+    align-items: center;
+    color: #F0F8FF; /* AliceBlue (link text color) */
+    text-decoration: none;
+    padding: 12px 17px;
+    border-radius: 4px;
+    transition: background 0.3s ease, color 0.3s ease;
+    gap: 15px;
+}
+
+.account-info li a:hover {
+    background: rgba(255, 255, 255, 0.1); /* Sedikit transparan */
+    color: #fff;
+}
+
 /* Main Content */
 .main-content {
     margin-left: 62px;
@@ -119,6 +195,17 @@ body {
     margin-bottom: 15px;
     color: #2C3E50; /* Midnight Blue Variation (header text) */
     font-weight: 600;
+}
+
+/* Dashboard Header */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dashboard-header .account-name {
+    text-align: right;
 }
 
 .dashboard-info {
@@ -188,7 +275,6 @@ canvas#dashboardChart {
     padding: 5px 5px;
     border-radius: 5px;
     background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .chart-controls select {
@@ -437,6 +523,11 @@ button:hover {
     background-color: #2980B9;
 }
 
+/* Hidden Class */
+.hidden {
+    display: none !important;
+}
+
 
 /* Responsif */
 @media (max-width: 1024px) {
@@ -473,7 +564,7 @@ button:hover {
         position: relative;
         top: 0;
         right: 0;
-        margin-bottom: 10px;
+        margin-bottom: 1px;
         width: 100%;
         display: flex;
         justify-content: center;
@@ -487,7 +578,6 @@ button:hover {
     padding: 20px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
-    transition: all 0.3s ease;
 }
 
 .content#info h1 {
@@ -551,4 +641,3 @@ button:hover {
 *::after {
   box-sizing: border-box;
 }
-
